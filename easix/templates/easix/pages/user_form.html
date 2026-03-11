@@ -1,0 +1,122 @@
+{# User Form Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block content %}
+<div class="max-w-2xl space-y-6">
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        {# Basic Info #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-lg font-semibold text-gray-900">User Information</h3>
+            </div>
+            <div class="card-body space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-group">
+                        <label for="first_name" class="form-label">First Name</label>
+                        <input type="text"
+                               id="first_name"
+                               name="first_name"
+                               value="{{ user.first_name }}"
+                               class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name" class="form-label">Last Name</label>
+                        <input type="text"
+                               id="last_name"
+                               name="last_name"
+                               value="{{ user.last_name }}"
+                               class="form-input">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email" class="form-label form-label-required">Email</label>
+                    <input type="email"
+                           id="email"
+                           name="email"
+                           value="{{ user.email }}"
+                           required
+                           class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text"
+                           value="{{ user.username }}"
+                           disabled
+                           class="form-input bg-gray-100">
+                    <p class="form-help">Username cannot be changed.</p>
+                </div>
+            </div>
+        </div>
+        
+        {# Settings #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-lg font-semibold text-gray-900">Account Settings</h3>
+            </div>
+            <div class="card-body space-y-4">
+                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer">
+                    <div>
+                        <p class="font-medium text-gray-900">Active</p>
+                        <p class="text-sm text-gray-500">User can log in and access the system</p>
+                    </div>
+                    <input type="checkbox"
+                           name="is_active"
+                           {% if user.is_active %}checked{% endif %}
+                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                </label>
+                
+                <label class="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer">
+                    <div>
+                        <p class="font-medium text-gray-900">Staff Status</p>
+                        <p class="text-sm text-gray-500">User can access the admin interface</p>
+                    </div>
+                    <input type="checkbox"
+                           name="is_staff"
+                           {% if user.is_staff %}checked{% endif %}
+                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                </label>
+            </div>
+        </div>
+        
+        {# Roles #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-lg font-semibold text-gray-900">Roles</h3>
+            </div>
+            <div class="card-body">
+                <div class="space-y-2">
+                    {% for group in groups %}
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                        <input type="checkbox"
+                               name="groups"
+                               value="{{ group.pk }}"
+                               {% if group in user.groups.all %}checked{% endif %}
+                               class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        <div>
+                            <p class="font-medium text-gray-900">{{ group.name }}</p>
+                            <p class="text-sm text-gray-500">{{ group.permissions.count }} permissions</p>
+                        </div>
+                    </label>
+                    {% empty %}
+                    <p class="text-sm text-gray-500">No roles available. Create roles first.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        {# Actions #}
+        <div class="flex items-center justify-end gap-3">
+            <a href="{% url 'easix:user_list' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                {{ "check"|icon }}
+                <span>Save Changes</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

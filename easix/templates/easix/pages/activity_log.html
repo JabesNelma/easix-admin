@@ -1,0 +1,127 @@
+{# Activity Log Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block content %}
+<div class="space-y-4">
+    {# Filters #}
+    <div class="card">
+        <div class="card-body">
+            <div class="flex items-center gap-4">
+                <div class="search-input flex-1">
+                    {{ "search"|icon }}
+                    <input type="text"
+                           name="q"
+                           placeholder="Search activity..."
+                           class="form-input pl-10"
+                           hx-get="{% url 'easix:activity_log' %}"
+                           hx-trigger="input changed delay:300ms"
+                           hx-target="#activity-list"
+                           hx-swap="innerHTML">
+                </div>
+                
+                <select name="action"
+                        class="form-input w-40"
+                        hx-get="{% url 'easix:activity_log' %}"
+                        hx-trigger="change"
+                        hx-target="#activity-list"
+                        hx-swap="innerHTML">
+                    <option value="">All Actions</option>
+                    <option value="created">Created</option>
+                    <option value="updated">Updated</option>
+                    <option value="deleted">Deleted</option>
+                </select>
+                
+                <select name="user"
+                        class="form-input w-40"
+                        hx-get="{% url 'easix:activity_log' %}"
+                        hx-trigger="change"
+                        hx-target="#activity-list"
+                        hx-swap="innerHTML">
+                    <option value="">All Users</option>
+                    {% for user in users %}
+                    <option value="{{ user.pk }}">{{ user.get_username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    {# Activity List #}
+    <div class="card" id="activity-list">
+        <div class="card-header">
+            <h3 class="text-lg font-semibold text-gray-900">Activity Log</h3>
+            <a href="{% url 'easix:clear_activity' %}" 
+               class="text-sm text-red-600 hover:text-red-500"
+               onclick="return confirm('Are you sure you want to clear all activity logs?');">
+                Clear All
+            </a>
+        </div>
+        
+        <div class="divide-y divide-gray-200">
+            {% for activity in activities %}
+            <div class="p-4 hover:bg-gray-50 transition-colors">
+                <div class="flex items-start gap-3">
+                    {# Icon #}
+                    <div class="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center
+                        {% if activity.action == 'created' %}bg-green-100 text-green-600
+                        {% elif activity.action == 'updated' %}bg-blue-100 text-blue-600
+                        {% elif activity.action == 'deleted' %}bg-red-100 text-red-600
+                        {% else %}bg-gray-100 text-gray-600{% endif %}">
+                        {% if activity.action == 'created' %}
+                            {{ "plus"|icon }}
+                        {% elif activity.action == 'updated' %}
+                            {{ "pencil"|icon }}
+                        {% elif activity.action == 'deleted' %}
+                            {{ "trash"|icon }}
+                        {% else %}
+                            {{ "activity"|icon }}
+                        {% endif %}
+                    </div>
+                    
+                    {# Content #}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-900">
+                            <span class="font-medium">{{ activity.user.get_username|default:"System" }}</span>
+                            <span class="text-gray-500">{{ activity.action }}</span>
+                            <span class="font-medium">{{ activity.model_name }}</span>
+                            {% if activity.object_str %}
+                            <span class="text-gray-500">"{{ activity.object_str }}"</span>
+                            {% endif %}
+                        </p>
+                        
+                        <div class="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                            <span>{{ activity.timestamp|date:"M d, Y H:i" }}</span>
+                            <span>{{ activity.timestamp|timesince }} ago</span>
+                            {% if activity.ip_address %}
+                            <span>{{ activity.ip_address }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        {% if activity.extra %}
+                        <div class="mt-2 text-xs text-gray-500 bg-gray-100 rounded p-2">
+                            <pre>{{ activity.extra|pprint }}</pre>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="p-12 text-center">
+                {% include "easix/components/empty_state.html" with 
+                    icon="activity"
+                    title="No activity yet"
+                    text="Activity will be logged here when users interact with the system." %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        {# Pagination #}
+        {% if activities.has_other_pages %}
+        <div class="card-footer">
+            {% include "easix/components/pagination.html" with page=activities.number total_pages=activities.paginator.num_pages %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

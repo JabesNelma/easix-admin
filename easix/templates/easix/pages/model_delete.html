@@ -1,0 +1,44 @@
+{# Model Delete Confirmation Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block content %}
+<div class="max-w-lg">
+    <div class="card">
+        <div class="card-header">
+            <div class="flex items-center gap-3 text-red-600">
+                {{ "exclamation"|icon }}
+                <h3 class="text-lg font-semibold text-gray-900">Confirm Delete</h3>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <p class="text-gray-600 mb-4">
+                Are you sure you want to delete <strong>{{ instance }}</strong>?
+            </p>
+            
+            <div class="alert alert-warning">
+                {{ "exclamation"|icon }}
+                <div>
+                    <p class="font-medium">Warning</p>
+                    <p class="text-sm">This action cannot be undone. All data associated with this item will be permanently removed.</p>
+                </div>
+            </div>
+            
+            <form method="post" class="mt-6">
+                {% csrf_token %}
+                <div class="flex items-center justify-end gap-3">
+                    <a href="{% url 'easix:model_list' model._meta.app_label model._meta.model_name %}" 
+                       class="btn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger">
+                        {{ "trash"|icon }}
+                        Delete
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

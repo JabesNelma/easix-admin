@@ -1,0 +1,33 @@
+{# Tabs Component #}
+
+<div x-data="tabs({ defaultTab: {{ default_tab|default:0 }} })" class="{{ class|default:'' }}">
+    {# Tab List #}
+    <div class="tabs">
+        {% for tab in tabs %}
+        <button type="button"
+                role="tab"
+                :class="isActive({{ forloop.counter0 }}) ? 'tab-active' : 'tab'"
+                @click="select({{ forloop.counter0 }})"
+                class="tab">
+            {% if tab.icon %}
+                {{ tab.icon|icon }}
+            {% endif %}
+            {{ tab.label }}
+        </button>
+        {% endfor %}
+    </div>
+    
+    {# Tab Panels #}
+    <div class="mt-4">
+        {% for tab in tabs %}
+        <div role="tabpanel"
+             x-show="isActive({{ forloop.counter0 }})"
+             x-cloak
+             class="tab-panel">
+            {% if tab.content %}
+                {{ tab.content|safe }}
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>

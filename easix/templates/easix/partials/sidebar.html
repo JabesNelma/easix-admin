@@ -1,0 +1,162 @@
+{# Sidebar Navigation #}
+
+<div x-data="sidebar()" 
+     :class="{ 'sidebar-hidden': !open }"
+     class="sidebar"
+     @keydown.window.escape="close()">
+    
+    {# Sidebar Overlay for Mobile #}
+    <div x-show="open" 
+         @click="close()"
+         class="sidebar-overlay"
+         x-cloak></div>
+    
+    {# Sidebar Content #}
+    <div class="flex flex-col h-full bg-gray-900">
+        
+        {# Logo / Brand #}
+        <div class="flex items-center justify-between h-16 px-4 border-b border-gray-800">
+            <a href="{% url 'easix:dashboard' %}" class="flex items-center gap-3">
+                {% if easix_settings.SITE_LOGO %}
+                <img src="{{ easix_settings.SITE_LOGO }}" alt="{{ easix_settings.SITE_BRAND }}" class="h-8">
+                {% else %}
+                <div class="flex items-center justify-center w-8 h-8 bg-indigo-600 rounded-lg">
+                    <span class="text-white font-bold">E</span>
+                </div>
+                {% endif %}
+                <span class="text-lg font-semibold text-white">{{ easix_settings.SITE_BRAND }}</span>
+            </a>
+            
+            {# Close button for mobile #}
+            <button type="button" 
+                    class="lg:hidden p-2 text-gray-400 hover:text-white"
+                    @click="close()">
+                {{ "x"|icon }}
+            </button>
+        </div>
+        
+        {# Navigation #}
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            
+            {# Dashboard #}
+            <a href="{% url 'easix:dashboard' %}" 
+               class="{% is_active_url 'dashboard' %}"
+               :class="{ 'nav-item-active': window.location.pathname === '{% url 'easix:dashboard' %}' }">
+                {{ "dashboard"|icon }}
+                <span>Dashboard</span>
+            </a>
+            
+            {# Models Navigation #}
+            {% if models %}
+            <div class="pt-4">
+                <div class="nav-group-title">Content</div>
+                
+                <div class="mt-2 space-y-1">
+                    {% regroup models by app_label as app_list %}
+                    {% for app in app_list %}
+                        {% if app.grouper %}
+                        <div class="nav-group-title text-xs text-gray-600 uppercase mt-3">
+                            {{ app.grouper|title }}
+                        </div>
+                        {% endif %}
+                        
+                        {% for model in app.list %}
+                        <a href="{% url 'easix:model_list' model.app_label model.model_name %}"
+                           class="{% is_active_url model.model_name %}">
+                            {% if model.model_name == 'user' %}
+                                {{ "users"|icon }}
+                            {% else %}
+                                {{ "document-text"|icon }}
+                            {% endif %}
+                            <span>{{ model.verbose_name_plural|title }}</span>
+                        </a>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {# Activity Log #}
+            {% if easix_settings.ENABLE_ACTIVITY_LOG %}
+            <div class="pt-4">
+                <div class="nav-group-title">System</div>
+                
+                <div class="mt-2 space-y-1">
+                    <a href="{% url 'easix:activity_log' %}" 
+                       class="{% is_active_url 'activity' %}">
+                        {{ "activity"|icon }}
+                        <span>Activity Log</span>
+                    </a>
+                    
+                    <a href="{% url 'easix:permission_list' %}" 
+                       class="{% is_active_url 'permission' %}">
+                        {{ "check-badge"|icon }}
+                        <span>Permissions</span>
+                    </a>
+                    
+                    <a href="{% url 'easix:user_list' %}" 
+                       class="{% is_active_url 'user' %}">
+                        {{ "users"|icon }}
+                        <span>Users & Roles</span>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            
+            {# Settings #}
+            <a href="{% url 'easix:settings' %}" 
+               class="{% is_active_url 'settings' %}">
+                {{ "cog"|icon }}
+                <span>Settings</span>
+            </a>
+        </nav>
+        
+        {# User Profile #}
+        <div class="p-4 border-t border-gray-800">
+            <div x-data="dropdown()" class="relative">
+                <button type="button" 
+                        @click="toggle()"
+                        class="flex items-center w-full gap-3 p-2 text-left rounded-lg hover:bg-gray-800 transition-colors">
+                    {% avatar_tag request.user size='md' %}
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-white truncate">{{ request.user.get_full_name|default:request.user.username }}</p>
+                        <p class="text-xs text-gray-400 truncate">{{ request.user.email }}</p>
+                    </div>
+                    {{ "chevron-down"|icon }}
+                </button>
+                
+                <div x-show="open"
+                     x-cloak
+                     @click.outside="close()"
+                     class="dropdown left-0 right-auto">
+                    <a href="#" class="dropdown-item">
+                        {{ "user"|icon }}
+                        <span>Profile</span>
+                    </a>
+                    <a href="{% url 'easix:settings' %}" class="dropdown-item">
+                        {{ "cog"|icon }}
+                        <span>Settings</span>
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="{% url 'admin:logout' %}" class="dropdown-item text-red-600">
+                        {{ "logout"|icon }}
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Mobile Menu Button #}
+<button type="button" 
+        class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md text-gray-600 hover:text-gray-900"
+        @click="$dispatch('sidebar-toggle')">
+    {{ "menu"|icon }}
+</button>
+
+<script>
+document.addEventListener('sidebar-toggle', () => {
+    window.dispatchEvent(new CustomEvent('sidebar-toggle'));
+});
+</script>

@@ -1,0 +1,88 @@
+{# File Upload Component with Drag and Drop #}
+
+<div x-data="fileUpload({ maxFiles: {{ max_files|default:10 }}, acceptedTypes: '{{ accepted_types|default:'*' }}' })"
+     class="{{ class|default:'' }}">
+    
+    {# Upload Area #}
+    <div class="file-upload"
+         :class="{ 'dragging': dragging }"
+         @dragover.prevent
+         @dragleave.prevent
+         @drop.prevent>
+        
+        <input type="file" 
+               ref="input"
+               multiple
+               class="hidden"
+               @change="handleFiles($event.target.files)"
+               accept="{{ accepted_types|default:'*' }}">
+        
+        <div class="text-center">
+            {{ "upload"|icon }}
+            <p class="mt-2 text-sm text-gray-600">
+                <span class="font-medium text-indigo-600 hover:text-indigo-500">Click to upload</span>
+                or drag and drop
+            </p>
+            <p class="mt-1 text-xs text-gray-500">
+                {{ help_text|default:'PNG, JPG, GIF up to 10MB' }}
+            </p>
+        </div>
+    </div>
+    
+    {# File List #}
+    {% if show_preview|default:True %}
+    <div class="mt-4 space-y-2">
+        <template x-for="(file, index) in files" :key="index">
+            <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                {# Preview #}
+                <div class="flex-shrink-0 w-12 h-12 bg-gray-200 rounded overflow-hidden">
+                    <template x-if="file.preview">
+                        <img :src="file.preview" class="w-full h-full object-cover">
+                    </template>
+                    <template x-if="!file.preview">
+                        <div class="flex items-center justify-center w-full h-full text-gray-400">
+                            {{ "document"|icon }}
+                        </div>
+                    </template>
+                </div>
+                
+                {# File Info #}
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate" x-text="file.name"></p>
+                    <p class="text-xs text-gray-500" x-text="formatFileSize(file.size)"></p>
+                    
+                    {# Progress #}
+                    <template x-if="uploading">
+                        <div class="mt-1 progress">
+                            <div class="progress-bar" :style="`width: ${file.progress}%`"></div>
+                        </div>
+                    </template>
+                </div>
+                
+                {# Remove Button #}
+                <button type="button"
+                        @click="removeFile(index)"
+                        class="flex-shrink-0 p-1 text-gray-400 hover:text-red-500 rounded">
+                    {{ "x"|icon }}
+                </button>
+            </div>
+        </template>
+    </div>
+    {% endif %}
+    
+    {# Upload Progress #}
+    <template x-if="uploading && files.length > 1">
+        <div class="mt-4">
+            <div class="flex items-center justify-between mb-1">
+                <span class="text-sm text-gray-600">Uploading...</span>
+                <span class="text-sm text-gray-600" x-text="Math.round(progress) + '%'"></span>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" :style="`width: ${progress}%`"></div>
+            </div>
+        </div>
+    </template>
+    
+    {# Hidden Input for Form Submission #}
+    <input type="hidden" name="{{ name }}" :value="files.map(f => f.name).join(',')">
+</div>

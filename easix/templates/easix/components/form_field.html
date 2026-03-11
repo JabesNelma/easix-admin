@@ -1,0 +1,197 @@
+{# Form Field Component #}
+
+<div class="form-group {{ class|default:'' }}"
+     {% if show_when %}
+     x-show="{{ show_when }}"
+     x-cloak
+     {% endif %}>
+    
+    {# Label #}
+    {% if label %}
+    <label for="{{ id|default:name }}" 
+           class="form-label {% if required %}form-label-required{% endif %}">
+        {{ label }}
+    </label>
+    {% endif %}
+    
+    {# Input wrapper #}
+    <div class="relative">
+        {% if prefix %}
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">{{ prefix }}</span>
+        {% endif %}
+        
+        {% if icon %}
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            {{ icon|icon }}
+        </span>
+        {% endif %}
+        
+        {# Input field based on type #}
+        {% if type == 'textarea' %}
+        <textarea id="{{ id|default:name }}"
+                  name="{{ name }}"
+                  rows="{{ rows|default:4 }}"
+                  placeholder="{{ placeholder }}"
+                  {% if required %}required{% endif %}
+                  {% if readonly %}readonly{% endif %}
+                  {% if disabled %}disabled{% endif %}
+                  class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}"
+                  {% if value %}{{ value }}{% endif %}>{{ value|default:'' }}</textarea>
+        
+        {% elif type == 'select' %}
+        <select id="{{ id|default:name }}"
+                name="{{ name }}"
+                {% if required %}required{% endif %}
+                {% if readonly %}readonly{% endif %}
+                {% if disabled %}disabled{% endif %}
+                class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}">
+            {% if placeholder %}
+            <option value="">{{ placeholder }}</option>
+            {% endif %}
+            {% for choice in choices %}
+            <option value="{{ choice.value }}" {% if value == choice.value|stringformat:'s' %}selected{% endif %}>
+                {{ choice.label }}
+            </option>
+            {% endfor %}
+        </select>
+        
+        {% elif type == 'checkbox' %}
+        <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox"
+                   id="{{ id|default:name }}"
+                   name="{{ name }}"
+                   value="on"
+                   {% if value %}checked{% endif %}
+                   {% if readonly %}readonly{% endif %}
+                   {% if disabled %}disabled{% endif %}
+                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+            {% if checkbox_label %}
+            <span class="text-sm text-gray-700">{{ checkbox_label }}</span>
+            {% endif %}
+        </label>
+        
+        {% elif type == 'radio' %}
+        <div class="space-y-2">
+            {% for option in choices %}
+            <label class="flex items-center gap-2 cursor-pointer">
+                <input type="radio"
+                       name="{{ name }}"
+                       value="{{ option.value }}"
+                       {% if value == option.value|stringformat:'s' %}checked{% endif %}
+                       class="border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-sm text-gray-700">{{ option.label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        
+        {% elif type == 'file' or type == 'image' %}
+        <input type="file"
+               id="{{ id|default:name }}"
+               name="{{ name }}"
+               {% if required %}required{% endif %}
+               {% if readonly %}readonly{% endif %}
+               {% if disabled %}disabled{% endif %}
+               {% if accept %}accept="{{ accept }}"{% endif %}
+               class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}">
+        
+        {% elif type == 'date' %}
+        <input type="date"
+               id="{{ id|default:name }}"
+               name="{{ name }}"
+               value="{{ value }}"
+               placeholder="{{ placeholder }}"
+               {% if required %}required{% endif %}
+               {% if readonly %}readonly{% endif %}
+               {% if disabled %}disabled{% endif %}
+               class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}">
+        
+        {% elif type == 'datetime' %}
+        <input type="datetime-local"
+               id="{{ id|default:name }}"
+               name="{{ name }}"
+               value="{{ value }}"
+               placeholder="{{ placeholder }}"
+               {% if required %}required{% endif %}
+               {% if readonly %}readonly{% endif %}
+               {% if disabled %}disabled{% endif %}
+               class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}">
+        
+        {% elif type == 'number' %}
+        <input type="number"
+               id="{{ id|default:name }}"
+               name="{{ name }}"
+               value="{{ value }}"
+               placeholder="{{ placeholder }}"
+               {% if min_value is not None %}min="{{ min_value }}"{% endif %}
+               {% if max_value is not None %}max="{{ max_value }}"{% endif %}
+               {% if step %}step="{{ step }}"{% endif %}
+               {% if required %}required{% endif %}
+               {% if readonly %}readonly{% endif %}
+               {% if disabled %}disabled{% endif %}
+               class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}">
+        
+        {% elif type == 'email' %}
+        <input type="email"
+               id="{{ id|default:name }}"
+               name="{{ name }}"
+               value="{{ value }}"
+               placeholder="{{ placeholder }}"
+               {% if required %}required{% endif %}
+               {% if readonly %}readonly{% endif %}
+               {% if disabled %}disabled{% endif %}
+               class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}">
+        
+        {% elif type == 'url' %}
+        <input type="url"
+               id="{{ id|default:name }}"
+               name="{{ name }}"
+               value="{{ value }}"
+               placeholder="{{ placeholder }}"
+               {% if required %}required{% endif %}
+               {% if readonly %}readonly{% endif %}
+               {% if disabled %}disabled{% endif %}
+               class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}">
+        
+        {% elif type == 'password' %}
+        <input type="password"
+               id="{{ id|default:name }}"
+               name="{{ name }}"
+               value="{{ value }}"
+               placeholder="{{ placeholder }}"
+               {% if required %}required{% endif %}
+               {% if readonly %}readonly{% endif %}
+               {% if disabled %}disabled{% endif %}
+               class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}">
+        
+        {% else %}
+        <input type="{{ type|default:'text' }}"
+               id="{{ id|default:name }}"
+               name="{{ name }}"
+               value="{{ value }}"
+               placeholder="{{ placeholder }}"
+               {% if minlength %}minlength="{{ minlength }}"{% endif %}
+               {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+               {% if min_value is not None %}min="{{ min_value }}"{% endif %}
+               {% if max_value is not None %}max="{{ max_value }}"{% endif %}
+               {% if pattern %}pattern="{{ pattern }}"{% endif %}
+               {% if required %}required{% endif %}
+               {% if readonly %}readonly{% endif %}
+               {% if disabled %}disabled{% endif %}
+               class="form-input {% if prefix or icon %}pl-10{% endif %} {% if error %}form-input-error{% endif %}">
+        {% endif %}
+        
+        {% if suffix %}
+        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">{{ suffix }}</span>
+        {% endif %}
+    </div>
+    
+    {# Help text #}
+    {% if help_text %}
+    <p class="form-help">{{ help_text }}</p>
+    {% endif %}
+    
+    {# Error message #}
+    {% if error %}
+    <p class="form-error">{{ error }}</p>
+    {% endif %}
+</div>

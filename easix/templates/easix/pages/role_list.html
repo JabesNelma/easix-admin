@@ -1,0 +1,69 @@
+{# Role List Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block page_actions %}
+<a href="{% url 'easix:role_create' %}" class="btn btn-primary">
+    {{ "plus"|icon }}
+    <span>Create Role</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for role in roles %}
+    <div class="card">
+        <div class="card-body">
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                        {{ "check-badge"|icon }}
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900">{{ role.name }}</h3>
+                        <p class="text-sm text-gray-500">{{ role.user_set.count }} users</p>
+                    </div>
+                </div>
+                
+                <div x-data="dropdown()" class="relative">
+                    <button type="button" @click="toggle()" class="p-1 text-gray-400 hover:text-gray-600">
+                        {{ "dots-vertical"|icon }}
+                    </button>
+                    <div x-show="open" x-cloak @click.outside="close()" class="dropdown right-0">
+                        <a href="{% url 'easix:role_update' role.pk %}" class="dropdown-item">
+                            {{ "pencil"|icon }}
+                            <span>Edit</span>
+                        </a>
+                        <a href="#" class="dropdown-item text-red-600">
+                            {{ "trash"|icon }}
+                            <span>Delete</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="space-y-2">
+                <p class="text-sm text-gray-600">Permissions:</p>
+                <div class="flex flex-wrap gap-1">
+                    {% for perm in role.permissions.all|slice:":5" %}
+                    <span class="badge badge-primary">{{ perm.name|truncatewords:2 }}</span>
+                    {% endfor %}
+                    {% if role.permissions.count > 5 %}
+                    <span class="badge badge-gray">+{{ role.permissions.count|add:"-5" }} more</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full">
+        {% include "easix/components/empty_state.html" with 
+            icon="check-badge"
+            title="No roles yet"
+            text="Create your first role to manage user permissions."
+            action.label="Create Role"
+            action.url="easix:role_create" %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

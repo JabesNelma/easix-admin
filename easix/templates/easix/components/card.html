@@ -1,0 +1,44 @@
+{# Card Component #}
+
+<div class="card {{ class|default:'' }}">
+    {% if title or actions %}
+    <div class="card-header">
+        {% if title %}
+        <div class="flex items-center gap-2">
+            {% if icon %}
+                {{ icon|icon }}
+            {% endif %}
+            <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
+        </div>
+        {% endif %}
+        
+        {% if actions %}
+        <div class="flex items-center gap-2">
+            {% for action in actions %}
+                {% include "easix/components/button.html" with style=action.style|default:'ghost' size='sm' label=action.label icon=action.icon %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% if subtitle %}
+    <div class="px-6 py-2 border-b border-gray-100 bg-gray-50">
+        <p class="text-sm text-gray-600">{{ subtitle }}</p>
+    </div>
+    {% endif %}
+    
+    <div class="card-body">
+        {% block content %}
+            {{ content|safe }}
+        {% endblock %}
+    </div>
+    
+    {% if footer %}
+    <div class="card-footer">
+        {% block footer %}
+            {{ footer|safe }}
+        {% endblock %}
+    </div>
+    {% endif %}
+</div>

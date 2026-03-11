@@ -1,0 +1,71 @@
+{# Role Form Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block content %}
+<div class="max-w-4xl">
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        {# Basic Info #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-lg font-semibold text-gray-900">Basic Information</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="name" class="form-label form-label-required">Role Name</label>
+                    <input type="text"
+                           id="name"
+                           name="name"
+                           value="{{ role.name|default:'' }}"
+                           placeholder="e.g., Manager, Editor, Viewer"
+                           required
+                           class="form-input">
+                    <p class="form-help">A descriptive name for this role.</p>
+                </div>
+            </div>
+        </div>
+        
+        {# Permissions #}
+        <div class="card">
+            <div class="card-header">
+                <h3 class="text-lg font-semibold text-gray-900">Permissions</h3>
+            </div>
+            <div class="card-body">
+                <div class="space-y-6">
+                    {% regroup permissions by content_type as content_types %}
+                    {% for ct in content_types %}
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-900 mb-3">
+                            {{ ct.grouper.app_label|title }} - {{ ct.grouper.model|title }}
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {% for perm in ct.list %}
+                            <label class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                                <input type="checkbox"
+                                       name="permissions"
+                                       value="{{ perm.pk }}"
+                                       {% if role and perm in role.permissions.all %}checked{% endif %}
+                                       class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-sm text-gray-700">{{ perm.name }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        {# Actions #}
+        <div class="flex items-center justify-end gap-3">
+            <a href="{% url 'easix:role_list' %}" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">
+                {{ "check"|icon }}
+                <span>Save Role</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

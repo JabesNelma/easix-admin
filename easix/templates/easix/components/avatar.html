@@ -1,0 +1,9 @@
+{# Avatar Component #}
+
+<div class="avatar {{ class|default:'' }}" title="{{ name }}">
+    {% if image %}
+        <img src="{{ image }}" alt="{{ name }}" class="w-full h-full object-cover">
+    {% else %}
+        <span>{{ initials|default:'?' }}</span>
+    {% endif %}
+</div>

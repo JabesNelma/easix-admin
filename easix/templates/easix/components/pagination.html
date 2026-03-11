@@ -1,0 +1,56 @@
+{# Pagination Component #}
+
+<nav class="flex items-center justify-between border-t border-gray-200 px-4 sm:px-0">
+    <div class="flex w-0 flex-1">
+        <button type="button"
+                @click="goToPage(1)"
+                :disabled="page === 1"
+                class="inline-flex items-center border-t-2 border-transparent pr-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            {{ "chevron-left"|icon }}
+            First
+        </button>
+        
+        <button type="button"
+                @click="goToPage(page - 1)"
+                :disabled="page === 1"
+                class="inline-flex items-center border-t-2 border-transparent px-4 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            {{ "chevron-left"|icon }}
+            Previous
+        </button>
+    </div>
+    
+    <div class="hidden md:flex items-center gap-1">
+        <template x-for="p in totalPages" :key="p">
+            <button type="button"
+                    @click="goToPage(p)"
+                    :class="page === p ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
+                    class="inline-flex items-center border-t-2 px-4 pt-4 text-sm font-medium"
+                    x-text="p">
+            </button>
+        </template>
+    </div>
+    
+    <div class="flex w-0 flex-1 justify-end">
+        <button type="button"
+                @click="goToPage(page + 1)"
+                :disabled="page === totalPages"
+                class="inline-flex items-center border-t-2 border-transparent pl-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            Next
+            {{ "chevron-right"|icon }}
+        </button>
+        
+        <button type="button"
+                @click="goToPage(totalPages)"
+                :disabled="page === totalPages"
+                class="inline-flex items-center border-t-2 border-transparent pl-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            Last
+            {{ "chevron-right"|icon }}
+        </button>
+    </div>
+</nav>
+
+<div class="mt-4 text-center text-sm text-gray-500">
+    Showing <span x-text="(page - 1) * perPage + 1"></span> to 
+    <span x-text="Math.min(page * perPage, total)"></span> of 
+    <span x-text="total"></span> results
+</div>

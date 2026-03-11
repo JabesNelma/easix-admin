@@ -1,0 +1,47 @@
+{# Chart Widget #}
+<div class="card">
+    <div class="card-header">
+        <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
+    </div>
+    <div class="card-body">
+        <canvas id="chart-{{ title|slugify }}" 
+                height="{{ height|default:'200' }}"
+                data-chart-type="{{ chart_type }}"
+                data-chart-data='{{ chart_data|safe }}'></canvas>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('chart-{{ title|slugify }}');
+    if (ctx && typeof Chart !== 'undefined') {
+        new Chart(ctx, {
+            type: '{{ chart_type }}',
+            data: {{ chart_data|safe }},
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>

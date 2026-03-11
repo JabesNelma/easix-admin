@@ -1,0 +1,8 @@
+{# Badge Component #}
+
+<span class="badge {{ class|default:'badge-gray' }}">
+    {% if icon %}
+        {{ icon|icon }}
+    {% endif %}
+    {{ value }}
+</span>

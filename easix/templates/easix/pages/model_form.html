@@ -1,0 +1,83 @@
+{# Model Form Page (Create/Update) #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block content %}
+<div x-data="form({ initialValues: {} })" class="max-w-4xl">
+    <form method="post" 
+          enctype="multipart/form-data"
+          @submit.prevent="submit()"
+          class="space-y-6">
+        {% csrf_token %}
+        
+        {# Fieldsets #}
+        {% for fieldset in config.fieldsets %}
+        <div class="card">
+            <div class="card-header">
+                <div class="flex items-center gap-2">
+                    {% if fieldset.icon %}
+                        {{ fieldset.icon|icon }}
+                    {% endif %}
+                    <h3 class="text-lg font-semibold text-gray-900">{{ fieldset.title }}</h3>
+                </div>
+                {% if fieldset.description %}
+                <p class="text-sm text-gray-500">{{ fieldset.description }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="card-body">
+                <div class="grid grid-cols-1 {% if config.columns > 1 %}md:grid-cols-{{ config.columns }}{% endif %} gap-6">
+                    {% for field in fieldset.fields %}
+                        {% with field_data=fields|get_item:field.name|default:field %}
+                        {% include "easix/components/form_field.html" with 
+                            name=field_data.name
+                            label=field_data.label
+                            type=field_data.type
+                            widget=field_data.widget
+                            value=field_data.value
+                            placeholder=field_data.placeholder
+                            help_text=field_data.help_text
+                            required=field_data.required
+                            choices=field_data.choices
+                            min_value=field_data.min_value
+                            max_value=field_data.max_value
+                            min_length=field_data.min_length
+                            maxlength=field_data.max_length
+                            step=field_data.step
+                            prefix=field_data.prefix
+                            suffix=field_data.suffix
+                            icon=field_data.icon
+                            readonly=field_data.readonly
+                            disabled=field_data.disabled
+                            colspan=field_data.colspan
+                            show_when=field_data.show_when
+                            error=errors|get_item:field_data.name %}
+                        {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        {# Form Actions #}
+        <div class="flex items-center justify-end gap-3">
+            {% if config.show_cancel %}
+            <a href="{{ config.cancel_url|default:'..' }}" class="btn btn-secondary">
+                Cancel
+            </a>
+            {% endif %}
+            
+            <button type="submit" 
+                    class="btn btn-primary"
+                    :disabled="submitting">
+                {% if submitting %}
+                <div class="spinner-sm mr-2"></div>
+                {% else %}
+                    {{ config.submit_icon|icon }}
+                {% endif %}
+                <span>{{ submit_label|default:'Save' }}</span>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+{# User List Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block page_actions %}
+<div class="flex items-center gap-3">
+    <div class="search-input">
+        {{ "search"|icon }}
+        <input type="text"
+               name="q"
+               value="{{ request.GET.q }}"
+               placeholder="Search users..."
+               class="form-input pl-10 w-64"
+               hx-get="{% url 'easix:user_list' %}"
+               hx-trigger="input changed delay:300ms"
+               hx-target="#user-list"
+               hx-swap="innerHTML">
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" id="user-list">
+    <div class="table-container">
+        <table class="table">
+            <thead class="table-header">
+                <tr>
+                    <th class="table-th">User</th>
+                    <th class="table-th">Roles</th>
+                    <th class="table-th">Status</th>
+                    <th class="table-th">Joined</th>
+                    <th class="table-th text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
+                {% for user in users %}
+                <tr class="table-tr">
+                    <td class="table-td">
+                        <div class="flex items-center gap-3">
+                            {% avatar_tag user size='md' %}
+                            <div>
+                                <p class="font-medium text-gray-900">{{ user.get_full_name|default:user.username }}</p>
+                                <p class="text-sm text-gray-500">{{ user.email }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="table-td">
+                        <div class="flex flex-wrap gap-1">
+                            {% for group in user.groups.all %}
+                            <span class="badge badge-primary">{{ group.name }}</span>
+                            {% empty %}
+                            <span class="text-sm text-gray-400">No roles</span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td class="table-td">
+                        {% if user.is_active %}
+                        <span class="badge badge-success">Active</span>
+                        {% else %}
+                        <span class="badge badge-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="table-td">
+                        <span class="text-sm text-gray-500">{{ user.date_joined|date:"M d, Y" }}</span>
+                    </td>
+                    <td class="table-td text-right">
+                        <div class="flex items-center justify-end gap-1">
+                            <a href="{% url 'easix:user_update' user.pk %}"
+                               class="p-1 text-gray-400 hover:text-indigo-600"
+                               title="Edit">
+                                {{ "pencil"|icon }}
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="px-6 py-12 text-center">
+                        {% include "easix/components/empty_state.html" with 
+                            icon="users"
+                            title="No users found"
+                            text="No users match your search criteria." %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

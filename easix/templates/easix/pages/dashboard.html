@@ -1,0 +1,75 @@
+{# Dashboard Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block content %}
+<div class="space-y-6">
+    {# Stats Row #}
+    <div class="grid grid-cols-12 gap-4">
+        {% for widget in widgets %}
+        <div class="{% widget_class widget.width %}">
+            {% include widget.template with widget=widget %}
+        </div>
+        {% endfor %}
+    </div>
+    
+    {# Quick Actions #}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="text-lg font-semibold text-gray-900">Quick Actions</h3>
+        </div>
+        <div class="card-body">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                {% for model in models|slice:":6" %}
+                <a href="{% url 'easix:model_create' model.app_label model.model_name %}"
+                   class="flex flex-col items-center p-4 text-center rounded-lg border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-colors">
+                    <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 mb-2">
+                        {{ "plus"|icon }}
+                    </div>
+                    <span class="text-sm font-medium text-gray-900">New {{ model.verbose_name|title }}</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    {# Recent Activity #}
+    {% if easix_settings.ENABLE_ACTIVITY_LOG %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="text-lg font-semibold text-gray-900">Recent Activity</h3>
+            <a href="{% url 'easix:activity_log' %}" class="text-sm text-indigo-600 hover:text-indigo-500">View all</a>
+        </div>
+        <div class="card-body">
+            <div class="space-y-3">
+                {% for activity in recent_activities %}
+                <div class="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
+                    <div class="flex-shrink-0 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                        {% if activity.action == 'created' %}
+                            <span class="text-green-600">{{ "plus"|icon }}</span>
+                        {% elif activity.action == 'updated' %}
+                            <span class="text-blue-600">{{ "pencil"|icon }}</span>
+                        {% elif activity.action == 'deleted' %}
+                            <span class="text-red-600">{{ "trash"|icon }}</span>
+                        {% else %}
+                            <span class="text-gray-600">{{ "activity"|icon }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-900 truncate">
+                            <span class="font-medium">{{ activity.user.get_username|default:"System" }}</span>
+                            {{ activity.action }}
+                            <span class="font-medium">{{ activity.object_str|default:activity.model_name }}</span>
+                        </p>
+                        <p class="text-xs text-gray-500">{{ activity.timestamp|timesince }} ago</p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-sm text-gray-500 text-center py-4">No recent activity</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

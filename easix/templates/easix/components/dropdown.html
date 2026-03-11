@@ -1,0 +1,50 @@
+{# Dropdown Component #}
+
+<div x-data="dropdown()" class="relative inline-block text-left">
+    {# Trigger #}
+    <button type="button" 
+            @click="toggle()"
+            class="btn btn-ghost btn-icon"
+            aria-haspopup="true"
+            :aria-expanded="open">
+        {% if trigger %}
+            {{ trigger|safe }}
+        {% else %}
+            {{ "dots-vertical"|icon }}
+        {% endif %}
+    </button>
+    
+    {# Menu #}
+    <div x-show="open"
+         x-cloak
+         @click.outside="close()"
+         x-transition:enter="ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="ease-in duration-150"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         class="dropdown"
+         role="menu"
+         aria-orientation="vertical">
+        
+        {% for item in items %}
+            {% if item.divider %}
+            <div class="dropdown-divider"></div>
+            {% else %}
+            <a href="{{ item.url|default:'#' }}"
+               class="dropdown-item"
+               role="menuitem"
+               {% if item.confirm %}onclick="return confirm('{{ item.confirm }}');"{% endif %}
+               {% if item.hx_get %}hx-get="{{ item.hx_get }}"{% endif %}
+               {% if item.hx_post %}hx-post="{{ item.hx_post }}"{% endif %}
+               {% if item.hx_target %}hx-target="{{ item.hx_target }}"{% endif %}>
+                {% if item.icon %}
+                    {{ item.icon|icon }}
+                {% endif %}
+                <span>{{ item.label }}</span>
+            </a>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>

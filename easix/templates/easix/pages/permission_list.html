@@ -1,0 +1,30 @@
+{# Permission List Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block content %}
+<div class="space-y-4">
+    {% for key, group in grouped_permissions.items %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="text-lg font-semibold text-gray-900">{{ group.name }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {% for perm in group.permissions %}
+                <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded flex items-center justify-center text-indigo-600">
+                        {{ "check-badge"|icon }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">{{ perm.name }}</p>
+                        <p class="text-xs text-gray-500">{{ perm.codename }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,7 @@
+include LICENSE
+include README.md
+include setup.py
+recursive-include easix *.py *.html *.css *.js *.json *.svg *.png
+recursive-exclude easix __pycache__
+recursive-exclude easix *.pyc
+recursive-exclude easix *.pyo

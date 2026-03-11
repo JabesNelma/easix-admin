@@ -1,0 +1,22 @@
+{# Search Input Component #}
+
+<div class="search-input {{ class|default:'' }}">
+    {{ "search"|icon }}
+    <input type="text"
+           name="{{ name|default:'q' }}"
+           value="{{ value }}"
+           placeholder="{{ placeholder|default:'Search...' }}"
+           class="form-input pl-10"
+           {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
+           {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
+           {% if hx_trigger %}hx-trigger="{{ hx_trigger|default:'input changed delay:300ms' }}"{% endif %}
+           {% if hx_swap %}hx-swap="{{ hx_swap|default:'innerHTML' }}"{% endif %}>
+    
+    {% if clearable and value %}
+    <button type="button"
+            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            onclick="this.previousElementSibling.value = ''; this.previousElementSibling.dispatchEvent(new Event('input'));">
+        {{ "x"|icon }}
+    </button>
+    {% endif %}
+</div>

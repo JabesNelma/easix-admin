@@ -1,0 +1,28 @@
+{# Button Component #}
+{% load easix_tags %}
+
+<button type="{{ type|default:'button' }}"
+        class="
+            btn
+            {% if style == 'primary' %}btn-primary{% elif style == 'danger' %}btn-danger{% elif style == 'success' %}btn-success{% elif style == 'ghost' %}btn-ghost{% else %}btn-secondary{% endif %}
+            {% if size == 'sm' %}btn-sm{% elif size == 'lg' %}btn-lg{% endif %}
+            {% if icon_only %}btn-icon{% endif %}
+            {{ class|default:'' }}
+        "
+        {% if disabled %}disabled{% endif %}
+        {% if onclick %}onclick="{{ onclick }}"{% endif %}
+        {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
+        {% if hx_post %}hx-post="{{ hx_post }}"{% endif %}
+        {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
+        {% if hx_swap %}hx-swap="{{ hx_swap }}"{% endif %}
+        {% if confirm %}onclick="return confirm('{{ confirm }}');"{% endif %}
+        {{ attrs }}>
+    {% if icon and not icon_only %}
+        {{ icon|icon }}
+    {% elif icon and icon_only %}
+        {{ icon|icon }}
+    {% endif %}
+    {% if not icon_only %}
+        <span>{{ label }}</span>
+    {% endif %}
+</button>

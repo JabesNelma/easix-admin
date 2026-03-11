@@ -1,0 +1,63 @@
+{# Search Results Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block content %}
+<div class="space-y-4">
+    {# Search Input #}
+    <div class="card">
+        <div class="card-body">
+            <form method="get" class="flex items-center gap-4">
+                <div class="search-input flex-1">
+                    {{ "search"|icon }}
+                    <input type="text"
+                           name="q"
+                           value="{{ query }}"
+                           placeholder="Search across all models..."
+                           class="form-input pl-10 text-lg"
+                           autofocus>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    {{ "search"|icon }}
+                    <span>Search</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    {# Results #}
+    {% if query %}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="text-lg font-semibold text-gray-900">
+                Search Results for "{{ query }}"
+            </h3>
+            <span class="badge badge-primary">{{ results|length }} results</span>
+        </div>
+        
+        <div class="divide-y divide-gray-200">
+            {% for result in results %}
+            <a href="{% url 'easix:model_detail' result.app_label result.model_name result.pk %}"
+               class="flex items-start gap-4 p-4 hover:bg-gray-50 transition-colors">
+                <div class="flex-shrink-0 w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                    {{ "document-text"|icon }}
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-medium text-gray-900 truncate">{{ result.item }}</p>
+                    <p class="text-sm text-gray-500">{{ result.model }}</p>
+                </div>
+                {{ "chevron-right"|icon }}
+            </a>
+            {% empty %}
+            <div class="p-12 text-center">
+                {% include "easix/components/empty_state.html" with 
+                    icon="search"
+                    title="No results found"
+                    text="Try searching with different keywords." %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

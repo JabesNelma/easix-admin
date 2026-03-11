@@ -1,0 +1,105 @@
+{# Model Detail Page #}
+{% extends "easix/base.html" %}
+{% load easix_tags %}
+
+{% block page_actions %}
+<div class="flex items-center gap-3">
+    <a href="{% url 'easix:model_update' model._meta.app_label model._meta.model_name instance.pk %}" 
+       class="btn btn-primary">
+        {{ "pencil"|icon }}
+        <span>Edit</span>
+    </a>
+    
+    <a href="{% url 'easix:model_duplicate' model._meta.app_label model._meta.model_name instance.pk %}" 
+       class="btn btn-secondary">
+        {{ "duplicate"|icon }}
+        <span>Duplicate</span>
+    </a>
+    
+    <a href="{% url 'easix:model_delete' model._meta.app_label model._meta.model_name instance.pk %}" 
+       class="btn btn-danger"
+       onclick="return confirm('Are you sure you want to delete this item?');">
+        {{ "trash"|icon }}
+        <span>Delete</span>
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl space-y-6">
+    {% for fieldset in config.fieldsets %}
+    <div class="card">
+        <div class="card-header">
+            <div class="flex items-center gap-2">
+                {% if fieldset.icon %}
+                    {{ fieldset.icon|icon }}
+                {% endif %}
+                <h3 class="text-lg font-semibold text-gray-900">{{ fieldset.title }}</h3>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {% for field in fieldset.fields %}
+                    {% with field_data=fields|get_item:field.name|default:field %}
+                    <div class="border-b border-gray-100 pb-3 last:border-0">
+                        <dt class="text-sm font-medium text-gray-500">{{ field_data.label }}</dt>
+                        <dd class="mt-1 text-sm text-gray-900">
+                            {% if field_data.type == 'image' and field_data.value %}
+                            <img src="{{ field_data.value }}" alt="{{ field_data.label }}" class="h-32 rounded-lg object-cover">
+                            {% elif field_data.type == 'boolean' %}
+                            {% if field_data.value %}
+                            <span class="badge badge-success">Yes</span>
+                            {% else %}
+                            <span class="badge badge-danger">No</span>
+                            {% endif %}
+                            {% elif field_data.type == 'file' and field_data.value %}
+                            <a href="{{ field_data.value }}" class="text-indigo-600 hover:text-indigo-500" target="_blank">
+                                {{ "download"|icon }}
+                                Download
+                            </a>
+                            {% else %}
+                            {{ field_data.value|default:'-' }}
+                            {% endif %}
+                        </dd>
+                    </div>
+                    {% endwith %}
+                {% endfor %}
+            </dl>
+        </div>
+    </div>
+    {% endfor %}
+    
+    {# Metadata #}
+    <div class="card">
+        <div class="card-header">
+            <h3 class="text-lg font-semibold text-gray-900">Information</h3>
+        </div>
+        <div class="card-body">
+            <dl class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Created</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ instance.created_at|default:"-"|date:"M d, Y H:i" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
+                    <dd class="mt-1 text-sm text-gray-900">{{ instance.updated_at|default:"-"|date:"M d, Y H:i" }}</dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">ID</dt>
+                    <dd class="mt-1 text-sm text-gray-900">#{{ instance.pk }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+    
+    {# Back Button #}
+    <div class="flex justify-between">
+        <a href="{% url 'easix:model_list' model._meta.app_label model._meta.model_name %}" 
+           class="btn btn-secondary">
+            {{ "chevron-left"|icon }}
+            Back to List
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{# Empty State Component #}
+
+<div class="empty-state {{ class|default:'' }}">
+    {% if icon %}
+    <div class="empty-state-icon">
+        {{ icon|icon }}
+    </div>
+    {% endif %}
+    
+    {% if title %}
+    <h3 class="empty-state-title">{{ title }}</h3>
+    {% endif %}
+    
+    {% if text %}
+    <p class="empty-state-text">{{ text }}</p>
+    {% endif %}
+    
+    {% if action %}
+    <div class="mt-4">
+        {% include "easix/components/button.html" with style='primary' label=action.label icon=action.icon hx_get=action.url %}
+    </div>
+    {% endif %}
+</div>

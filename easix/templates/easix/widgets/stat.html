@@ -1,0 +1,38 @@
+{# Stat Widget #}
+<div class="card">
+    <div class="card-body">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-sm font-medium text-gray-500">{{ title }}</p>
+                <p class="mt-2 text-3xl font-bold text-gray-900">{{ value }}</p>
+                {% if subtitle %}
+                <p class="mt-1 text-sm text-gray-500">{{ subtitle }}</p>
+                {% endif %}
+            </div>
+            <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
+                {{ icon|icon }}
+            </div>
+        </div>
+        
+        {% if trend is not None %}
+        <div class="mt-4 flex items-center gap-2">
+            {% if trend > 0 %}
+            <span class="flex items-center text-green-600 text-sm font-medium">
+                {{ "chevron-up"|icon }}
+                {{ trend }}%
+            </span>
+            {% elif trend < 0 %}
+            <span class="flex items-center text-red-600 text-sm font-medium">
+                {{ "chevron-down"|icon }}
+                {{ trend|abs }}%
+            </span>
+            {% else %}
+            <span class="flex items-center text-gray-600 text-sm font-medium">
+                No change
+            </span>
+            {% endif %}
+            <span class="text-sm text-gray-500">{{ trend_label }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>

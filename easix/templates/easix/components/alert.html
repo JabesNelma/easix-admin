@@ -1,0 +1,37 @@
+{# Alert Component #}
+
+<div class="alert 
+    {% if style == 'success' %}alert-success{% elif style == 'warning' %}alert-warning{% elif style == 'danger' or style == 'error' %}alert-danger{% else %}alert-info{% endif %}
+    {{ class|default:'' }}"
+    {% if dismissible %}data-dismissible{% endif %}>
+    
+    {# Icon #}
+    <div class="flex-shrink-0">
+        {% if style == 'success' %}
+            {{ "check-circle"|icon }}
+        {% elif style == 'warning' %}
+            {{ "exclamation"|icon }}
+        {% elif style == 'danger' or style == 'error' %}
+            {{ "x-mark"|icon }}
+        {% else %}
+            {{ "information-circle"|icon }}
+        {% endif %}
+    </div>
+    
+    {# Content #}
+    <div class="flex-1">
+        {% if title %}
+        <h4 class="font-medium mb-1">{{ title }}</h4>
+        {% endif %}
+        <div class="text-sm">{{ message|safe }}</div>
+    </div>
+    
+    {# Dismiss button #}
+    {% if dismissible %}
+    <button type="button" 
+            class="flex-shrink-0 p-1 rounded hover:bg-black/10 transition-colors"
+            onclick="this.closest('.alert').remove()">
+        {{ "x"|icon }}
+    </button>
+    {% endif %}
+</div>

@@ -1,0 +1,99 @@
+{# Login Page #}
+{% load static %}
+{% load easix_tags %}
+
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Easix Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="h-full">
+<div class="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full">
+        {# Logo #}
+        <div class="text-center mb-8">
+            <div class="flex items-center justify-center gap-3">
+                <div class="w-12 h-12 bg-indigo-600 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-xl">E</span>
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900">Easix Admin</h1>
+            </div>
+            <h2 class="mt-4 text-2xl font-semibold text-gray-900">Sign in to your account</h2>
+        </div>
+        
+        {# Login Form #}
+        <div class="card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6">
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    {% if form.errors %}
+                    <div class="flex items-start gap-3 px-4 py-3 rounded-lg border bg-red-50 border-red-200 text-red-800">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <div>
+                            <p class="font-medium">Invalid credentials</p>
+                            <p class="text-sm">Please enter a valid username and password.</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if next %}
+                    <input type="hidden" name="next" value="{{ next }}">
+                    {% endif %}
+                    
+                    <div class="space-y-1.5">
+                        <label for="id_username" class="block text-sm font-medium text-gray-700">Username</label>
+                        <input type="text" 
+                               name="username" 
+                               id="id_username" 
+                               required 
+                               autofocus 
+                               autocomplete="username"
+                               class="block w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Enter your username">
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <label for="id_password" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" 
+                               name="password" 
+                               id="id_password" 
+                               required 
+                               autocomplete="current-password"
+                               class="block w-full px-3 py-2 text-gray-900 border border-gray-300 rounded-lg placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Enter your password">
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   name="remember" 
+                                   id="remember" 
+                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <label for="remember" class="ml-2 text-sm text-gray-600">Remember me</label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 bg-indigo-600 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                        </svg>
+                        <span>Sign in</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        {# Footer #}
+        <p class="mt-8 text-center text-sm text-gray-500">
+            Protected by Easix Admin Framework
+        </p>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,276 @@
+{# Model List Page with Smart Table #}
+{% extends "easix/base.html" %}
+{% load static %}
+{% load easix_tags %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize table with Alpine.js
+    const tableConfig = {
+        dataUrl: "{% url 'easix:table_data' config.model._meta.app_label config.model._meta.model_name %}",
+        bulkActionUrl: "{% url 'easix:bulk_action' config.model._meta.app_label config.model_name %}",
+        perPage: {{ config.per_page }},
+        sort: '{{ config.default_sort }}',
+        mobileDisplay: {{ config.mobile_display|safe }},
+    };
+    
+    // Store config globally for the table component
+    window.easixTableConfig = tableConfig;
+});
+</script>
+{% endblock %}
+
+{% block page_actions %}
+<div class="flex items-center gap-3">
+    {# Search #}
+    <div class="search-input">
+        {{ "search"|icon }}
+        <input type="text"
+               x-model="$data.search"
+               placeholder="Search {{ model._meta.verbose_name_plural|title }}..."
+               class="form-input pl-10 w-64">
+    </div>
+    
+    {# Add Button #}
+    <a href="{% url 'easix:model_create' model._meta.app_label model._meta.model_name %}" 
+       class="btn btn-primary">
+        {{ "plus"|icon }}
+        <span>{{ add_label|default:'Create New' }}</span>
+    </a>
+    
+    {# Export Button #}
+    <a href="{% url 'easix:export_csv' model._meta.app_label model._meta.model_name %}" 
+       class="btn btn-secondary">
+        {{ "download"|icon }}
+        <span class="hidden sm:inline">Export</span>
+    </a>
+    
+    {# Column Visibility Toggle #}
+    <div x-data="dropdown()" class="relative">
+        <button type="button" @click="toggle()" class="btn btn-secondary btn-icon">
+            {{ "eye"|icon }}
+        </button>
+        <div x-show="open" x-cloak @click.outside="close()" class="dropdown right-0">
+            <div class="px-4 py-2 border-b border-gray-200">
+                <h4 class="text-sm font-medium text-gray-900">Columns</h4>
+            </div>
+            <template x-for="col in $data.columns" :key="col.field">
+                <label class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" 
+                           :checked="$data.isColumnVisible(col.field)"
+                           @change="$data.toggleColumn(col.field)"
+                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <span class="text-sm text-gray-700" x-text="col.label"></span>
+                </label>
+            </template>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div x-data="table(window.easixTableConfig || {})" class="space-y-4">
+    
+    {# Bulk Actions Bar #}
+    <div x-show="$data.selectedRows.length > 0" 
+         x-cloak
+         class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+        <span class="text-sm text-indigo-800">
+            <span x-text="$data.selectedRows.length"></span> items selected
+        </span>
+        <div class="flex items-center gap-2">
+            <template x-for="action in $data.bulkActions" :key="action.action_name">
+                <button type="button"
+                        @click="$data.applyBulkAction(action.action_name)"
+                        class="btn btn-sm"
+                        :class="action.style === 'danger' ? 'btn-danger' : 'btn-secondary'"
+                        x-text="action.label">
+                </button>
+            </template>
+            <button type="button" @click="$data.selectedRows = []; $data.selectAll = false;" 
+                    class="btn btn-sm btn-ghost">
+                Clear
+            </button>
+        </div>
+    </div>
+    
+    {# Filters #}
+    {% if config.filters %}
+    <div class="card">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="font-medium text-gray-900">Filters</h4>
+                <button type="button" @click="$data.showFilters = !$data.showFilters" class="text-sm text-indigo-600">
+                    <span x-text="$data.showFilters ? 'Hide' : 'Show'"></span>
+                </button>
+            </div>
+            <div x-show="$data.showFilters" x-cloak class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {% for filter in config.filters %}
+                <div class="form-group">
+                    <label class="form-label">{{ filter.label }}</label>
+                    <select x-model="$data.filterValues['{{ filter.field }}']"
+                            @change="$data.loadData()"
+                            class="form-input">
+                        <option value="">All</option>
+                        {% for option in filter.options %}
+                        <option value="{{ option.value }}">{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    {# Table #}
+    <div class="card">
+        <div class="table-container">
+            <table class="table">
+                <thead class="table-header">
+                    <tr>
+                        {% if config.selectable %}
+                        <th class="table-th w-12">
+                            <input type="checkbox"
+                                   x-model="$data.selectAll"
+                                   @change="$data.toggleSelectAll()"
+                                   class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                        </th>
+                        {% endif %}
+                        
+                        {% for column in config.columns %}
+                        <th class="table-th"
+                            style="{% if column.width %}width: {{ column.width }};{% endif %}"
+                            @click="$data.toggleSort('{{ column.field }}')">
+                            <div class="flex items-center gap-2">
+                                <span>{{ column.label }}</span>
+                                {% if column.sortable %}
+                                <span x-text="$data.getSortIcon('{{ column.field }}')" class="text-gray-400"></span>
+                                {% endif %}
+                            </div>
+                        </th>
+                        {% endfor %}
+                        
+                        {% if config.show_row_actions %}
+                        <th class="table-th text-right">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    {# Loading State #}
+                    <tr x-show="$data.loading">
+                        <td colspan="100%" class="px-6 py-12 text-center">
+                            <div class="spinner mx-auto"></div>
+                            <p class="mt-2 text-gray-500">Loading...</p>
+                        </td>
+                    </tr>
+                    
+                    {# Data Rows #}
+                    <template x-for="row in $data.data" :key="row.pk">
+                        <tr :class="$data.isSelected(row.pk) ? 'table-tr-selected' : 'table-tr'">
+                            {% if config.selectable %}
+                            <td class="table-td">
+                                <input type="checkbox"
+                                       :checked="$data.isSelected(row.pk)"
+                                       @change="$data.toggleSelectRow(row.pk)"
+                                       class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            </td>
+                            {% endif %}
+                            
+                            {% for column in config.columns %}
+                            <td class="table-td" x-show="$data.isColumnVisible('{{ column.field }}')">
+                                {% if column.type == 'boolean' %}
+                                <span x-text="$data.formatValue($data.getCellValue(row, '{{ column.field }}'), 'boolean')"></span>
+                                
+                                {% elif column.type == 'image' %}
+                                <img :src="$data.getCellValue(row, '{{ column.field }}')" class="w-10 h-10 rounded object-cover">
+                                
+                                {% else %}
+                                <span x-text="$data.getCellValue(row, '{{ column.field }}')"></span>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                            
+                            {% if config.show_row_actions %}
+                            <td class="table-td text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                    <a href="{% url 'easix:model_detail' model._meta.app_label model._meta.model_name 1 %}"
+                                       :href="`{% url 'easix:model_detail' model._meta.app_label model._meta.model_name 0 %}`.replace('/0/', '/' + row.pk + '/')"
+                                       class="p-1 text-gray-400 hover:text-indigo-600"
+                                       title="View">
+                                        {{ "eye"|icon }}
+                                    </a>
+                                    <a href="{% url 'easix:model_update' model._meta.app_label model._meta.model_name 1 %}"
+                                       :href="`{% url 'easix:model_update' model._meta.app_label model._meta.model_name 0 %}`.replace('/0/', '/' + row.pk + '/')"
+                                       class="p-1 text-gray-400 hover:text-indigo-600"
+                                       title="Edit">
+                                        {{ "pencil"|icon }}
+                                    </a>
+                                    <a href="{% url 'easix:model_delete' model._meta.app_label model._meta.model_name 1 %}"
+                                       :href="`{% url 'easix:model_delete' model._meta.app_label model._meta.model_name 0 %}`.replace('/0/', '/' + row.pk + '/')"
+                                       class="p-1 text-gray-400 hover:text-red-600"
+                                       title="Delete"
+                                       onclick="return confirm('Are you sure?');">
+                                        {{ "trash"|icon }}
+                                    </a>
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                    </template>
+                    
+                    {# Empty State #}
+                    <tr x-show="!$data.loading && $data.data.length === 0">
+                        <td colspan="100%" class="px-6 py-12">
+                            {% include "easix/components/empty_state.html" with 
+                                icon="document-text"
+                                title="No items found"
+                                text="Get started by creating a new "|add:model._meta.verbose_name|add:"."
+                                action.label=add_label
+                                action.url=add_url %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        {# Pagination #}
+        <div class="card-footer">
+            {% include "easix/components/pagination.html" %}
+        </div>
+    </div>
+    
+    {# Mobile Card View #}
+    <div class="lg:hidden space-y-3">
+        <template x-for="row in $data.data" :key="row.pk">
+            <div class="card p-4">
+                <div class="flex items-start justify-between mb-3">
+                    <div>
+                        <h4 class="font-medium text-gray-900" x-text="row.str"></h4>
+                    </div>
+                    <input type="checkbox"
+                           :checked="$data.isSelected(row.pk)"
+                           @change="$data.toggleSelectRow(row.pk)"
+                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                </div>
+                
+                <div class="space-y-2">
+                    <template x-for="field in $data.mobileDisplay" :key="field">
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="text-gray-500" x-text="field"></span>
+                            <span class="text-gray-900" x-text="$data.getCellValue(row, field)"></span>
+                        </div>
+                    </template>
+                </div>
+                
+                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
+                    <a href="#" class="btn btn-sm btn-secondary">View</a>
+                    <a href="#" class="btn btn-sm btn-primary">Edit</a>
+                </div>
+            </div>
+        </template>
+    </div>
+</div>
+{% endblock %}
