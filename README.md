@@ -270,8 +270,8 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ```bash
 # Clone the repository
-git clone https://github.com/easix-admin/easix.git
-cd easix
+git clone https://github.com/JabesNelma/easix-admin.git
+cd easix-admin
 
 # Create virtual environment
 python -m venv venv
@@ -304,8 +304,8 @@ Easix is inspired by:
 ## 📞 Support
 
 - **Documentation**: https://easix.dev/docs
-- **Issues**: https://github.com/easix-admin/easix/issues
-- **Discussions**: https://github.com/easix-admin/easix/discussions
+- **Issues**: https://github.com/JabesNelma/easix-admin/issues
+- **Discussions**: https://github.com/JabesNelma/easix-admin/discussions
 
 ---
 
