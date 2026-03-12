@@ -1,56 +1,107 @@
-{# Pagination Component #}
-
-<nav class="flex items-center justify-between border-t border-gray-200 px-4 sm:px-0">
-    <div class="flex w-0 flex-1">
-        <button type="button"
-                @click="goToPage(1)"
-                :disabled="page === 1"
-                class="inline-flex items-center border-t-2 border-transparent pr-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-            {{ "chevron-left"|icon }}
-            First
-        </button>
-        
-        <button type="button"
-                @click="goToPage(page - 1)"
-                :disabled="page === 1"
-                class="inline-flex items-center border-t-2 border-transparent px-4 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-            {{ "chevron-left"|icon }}
+{# Pagination Component - Reusable #}
+{% if pagination.has_other_pages %}
+<nav class="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 px-4 py-3 sm:px-6"
+     role="navigation"
+     aria-label="Pagination">
+    
+    {# Mobile Pagination #}
+    <div class="flex flex-1 justify-between sm:hidden">
+        {% if pagination.has_previous %}
+        <a href="?page={{ pagination.previous_page_number }}{{ query_params }}"
+           class="btn btn-secondary"
+           aria-label="Previous page">
             Previous
-        </button>
-    </div>
-    
-    <div class="hidden md:flex items-center gap-1">
-        <template x-for="p in totalPages" :key="p">
-            <button type="button"
-                    @click="goToPage(p)"
-                    :class="page === p ? 'bg-indigo-50 border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
-                    class="inline-flex items-center border-t-2 px-4 pt-4 text-sm font-medium"
-                    x-text="p">
-            </button>
-        </template>
-    </div>
-    
-    <div class="flex w-0 flex-1 justify-end">
-        <button type="button"
-                @click="goToPage(page + 1)"
-                :disabled="page === totalPages"
-                class="inline-flex items-center border-t-2 border-transparent pl-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-            Next
-            {{ "chevron-right"|icon }}
-        </button>
+        </a>
+        {% else %}
+        <span class="btn btn-secondary opacity-50 cursor-not-allowed" aria-disabled="true">
+            Previous
+        </span>
+        {% endif %}
         
-        <button type="button"
-                @click="goToPage(totalPages)"
-                :disabled="page === totalPages"
-                class="inline-flex items-center border-t-2 border-transparent pl-1 pt-4 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed">
-            Last
-            {{ "chevron-right"|icon }}
-        </button>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_page_number }}{{ query_params }}"
+           class="btn btn-secondary ml-3"
+           aria-label="Next page">
+            Next
+        </a>
+        {% else %}
+        <span class="btn btn-secondary ml-3 opacity-50 cursor-not-allowed" aria-disabled="true">
+            Next
+        </span>
+        {% endif %}
+    </div>
+    
+    {# Desktop Pagination #}
+    <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+        <div>
+            <p class="text-sm text-gray-700 dark:text-gray-300">
+                Showing
+                <span class="font-medium">{{ pagination.start_index }}</span>
+                to
+                <span class="font-medium">{{ pagination.end_index }}</span>
+                of
+                <span class="font-medium">{{ pagination.paginator.count }}</span>
+                results
+            </p>
+        </div>
+        
+        <div>
+            <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                {# Previous #}
+                {% if pagination.has_previous %}
+                <a href="?page={{ pagination.previous_page_number }}{{ query_params }}"
+                   class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <span class="sr-only">Previous</span>
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+                {% else %}
+                <span class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 opacity-50 cursor-not-allowed">
+                    <span class="sr-only">Previous</span>
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
+                    </svg>
+                </span>
+                {% endif %}
+                
+                {# Page Numbers #}
+                {% for num in pagination.page_range %}
+                    {% if num == pagination.number %}
+                    <span class="relative z-10 inline-flex items-center bg-indigo-600 px-4 py-2 text-sm font-semibold text-white focus:z-20">
+                        {{ num }}
+                    </span>
+                    {% elif num == '...' %}
+                    <span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        ...
+                    </span>
+                    {% else %}
+                    <a href="?page={{ num }}{{ query_params }}"
+                       class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 focus:z-20">
+                        {{ num }}
+                    </a>
+                    {% endif %}
+                {% endfor %}
+                
+                {# Next #}
+                {% if pagination.has_next %}
+                <a href="?page={{ pagination.next_page_number }}{{ query_params }}"
+                   class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <span class="sr-only">Next</span>
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+                {% else %}
+                <span class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 opacity-50 cursor-not-allowed">
+                    <span class="sr-only">Next</span>
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+                    </svg>
+                </span>
+                {% endif %}
+            </nav>
+        </div>
     </div>
 </nav>
-
-<div class="mt-4 text-center text-sm text-gray-500">
-    Showing <span x-text="(page - 1) * perPage + 1"></span> to 
-    <span x-text="Math.min(page * perPage, total)"></span> of 
-    <span x-text="total"></span> results
-</div>
+{% endif %}

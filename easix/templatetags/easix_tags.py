@@ -323,3 +323,100 @@ def get_first_model_url(models):
         pass
     
     return "#"
+
+
+@register.filter
+def get_item(dictionary, key):
+    """Get item from dictionary by key."""
+    if dictionary is None:
+        return None
+    if isinstance(dictionary, dict):
+        return dictionary.get(key)
+    if hasattr(dictionary, key):
+        return getattr(dictionary, key)
+    return None
+
+
+@register.filter
+def get_field_type(field):
+    """Get the widget type for a Django form field."""
+    if field is None:
+        return 'text'
+    
+    widget_class = field.field.widget.__class__.__name__.lower()
+    
+    if 'textarea' in widget_class:
+        return 'textarea'
+    elif 'checkbox' in widget_class:
+        return 'checkbox'
+    elif 'select' in widget_class:
+        return 'select'
+    elif 'date' in widget_class:
+        return 'date'
+    elif 'time' in widget_class:
+        return 'time'
+    elif 'email' in widget_class:
+        return 'email'
+    elif 'password' in widget_class:
+        return 'password'
+    elif 'file' in widget_class:
+        return 'file'
+    elif 'number' in widget_class:
+        return 'number'
+    elif 'url' in widget_class:
+        return 'url'
+    else:
+        return 'text'
+
+
+@register.filter
+def get_value(field):
+    """Get value from a form field."""
+    if field is None:
+        return ''
+    if hasattr(field, 'value'):
+        val = field.value()
+        return val if val is not None else ''
+    return field
+
+
+@register.filter
+def get_errors(field):
+    """Get errors from a form field."""
+    if field is None:
+        return []
+    if hasattr(field, 'errors'):
+        return field.errors
+    return []
+
+
+@register.simple_tag(takes_context=True)
+def get_field_value(context, obj, field_name):
+    """Get field value from an object."""
+    if obj is None:
+        return ''
+    
+    # Try to get attribute
+    if hasattr(obj, field_name):
+        value = getattr(obj, field_name)
+        if callable(value):
+            value = value()
+        return value
+    
+    # Try dictionary access
+    if isinstance(obj, dict) and field_name in obj:
+        return obj[field_name]
+    
+    return ''
+
+
+@register.filter
+def replace(value, args):
+    """Replace characters in a string."""
+    if not value:
+        return value
+    try:
+        old, new = args.split(':')
+        return str(value).replace(old, new)
+    except (ValueError, TypeError):
+        return value

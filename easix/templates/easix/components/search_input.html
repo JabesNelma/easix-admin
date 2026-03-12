@@ -1,22 +1,56 @@
-{# Search Input Component #}
-
-<div class="search-input {{ class|default:'' }}">
-    {{ "search"|icon }}
-    <input type="text"
-           name="{{ name|default:'q' }}"
-           value="{{ value }}"
-           placeholder="{{ placeholder|default:'Search...' }}"
-           class="form-input pl-10"
-           {% if hx_get %}hx-get="{{ hx_get }}"{% endif %}
-           {% if hx_target %}hx-target="{{ hx_target }}"{% endif %}
-           {% if hx_trigger %}hx-trigger="{{ hx_trigger|default:'input changed delay:300ms' }}"{% endif %}
-           {% if hx_swap %}hx-swap="{{ hx_swap|default:'innerHTML' }}"{% endif %}>
+{# Search Input Component with Debounce #}
+<div class="relative {% if class %}{{ class }}{% else %}w-full max-w-md{% endif %}"
+     x-data="{
+         search: '{{ query|default:'' }}',
+         debounce: null,
+         init() {
+             this.$watch('search', value => {
+                 clearTimeout(this.debounce);
+                 this.debounce = setTimeout(() => {
+                     this.$dispatch('search', { value });
+                     {% if auto_submit %}
+                     this.$el.submit();
+                     {% endif %}
+                 }, {{ debounce_ms|default:300 }});
+             });
+         }
+     }">
     
-    {% if clearable and value %}
+    {# Search Icon #}
+    <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+    </div>
+    
+    {# Input Field #}
+    <input type="text"
+           x-model="search"
+           name="{{ name|default:'search' }}"
+           value="{{ query|default:'' }}"
+           placeholder="{{ placeholder|default:'Search...' }}"
+           class="form-input pl-10 {% if rounded %}rounded-full{% else %}rounded-lg{% endif %}"
+           aria-label="{{ aria_label|default:'Search' }}"
+           {% if autofocus %}autofocus{% endif %}>
+    
+    {# Clear Button #}
     <button type="button"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            onclick="this.previousElementSibling.value = ''; this.previousElementSibling.dispatchEvent(new Event('input'));">
-        {{ "x"|icon }}
+            x-show="search.length > 0"
+            @click="search = ''; $dispatch('search', { value: '' });"
+            class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+            aria-label="Clear search">
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
     </button>
+    
+    {# Loading Indicator #}
+    {% if show_loading %}
+    <div x-show="loading" class="absolute inset-y-0 right-10 flex items-center">
+        <svg class="animate-spin h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
     {% endif %}
 </div>

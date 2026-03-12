@@ -1,13 +1,13 @@
-{# Base Template for Easix Admin - Enhanced with Dark Mode, Bottom Nav, and Accessibility #}
+{# Base Template for Easix Admin - Unified Integrated Layout #}
 {% load static %}
 {% load easix_tags %}
 
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#6366f1">
     <meta name="htmx-config" content='{"includeIndicatorStyles":false}'>
     <meta name="color-scheme" content="light dark">
 
@@ -23,82 +23,127 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 </head>
 
-<body class="h-full"
-      {% if body_class %}class="{{ body_class }}"{% endif %}>
+<body class="bg-gray-50 dark:bg-gray-900 transition-colors duration-300" x-data="dashboardApp()" :class="{ 'dark': darkMode }">
 
     {# Skip Link for Accessibility #}
     <a href="#main-content" 
-       class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg">
+       class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg font-medium">
         Skip to main content
     </a>
 
-    {# Sidebar #}
+    {# Header (64px Fixed Top) #}
+    {% include "easix/partials/header.html" %}
+
+    {# Sidebar (Fixed Left) #}
     {% include "easix/partials/sidebar.html" %}
 
-    {# Main Content Wrapper #}
-    <div class="lg:pl-64 flex flex-col min-h-screen">
+    {# Main Layout Container #}
+    <div class="pt-16 lg:pl-64 min-h-screen w-full">
 
-        {# Header #}
-        {% include "easix/partials/header.html" %}
-
-        {# Page Content #}
-        <main id="main-content" 
-              class="flex-1 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8"
-              role="main">
+        {# Main Content Scrollable Area #}
+        <main id="main-content" class="min-h-[calc(100vh-64px)]" role="main">
             
-            {# Messages #}
-            {% if messages %}
-            <div class="mb-6 space-y-2" role="alert" aria-live="polite">
-                {% for message in messages %}
-                {% include "easix/components/alert.html" with style=message.tags message=message class='mb-2' dismissible=True %}
-                {% endfor %}
-            </div>
-            {% endif %}
+            {# Page Wrapper #}
+            <div class="min-h-full">
+                {# Breadcrumb #}
+                {% block breadcrumb %}
+                {% if breadcrumb_items %}
+                <nav class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 lg:px-8 py-3"
+                     aria-label="Breadcrumb">
+                    <ol class="flex items-center gap-2 text-sm">
+                        <li>
+                            <a href="{% url 'easix:dashboard' %}" 
+                               class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                </svg>
+                            </a>
+                        </li>
+                        {% for item in breadcrumb_items %}
+                        <li class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                            </svg>
+                            {% if item.url %}
+                            <a href="{{ item.url }}" 
+                               class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors truncate">
+                                {{ item.label }}
+                            </a>
+                            {% else %}
+                            <span class="text-gray-900 dark:text-white font-medium truncate" aria-current="page">
+                                {{ item.label }}
+                            </span>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ol>
+                </nav>
+                {% endif %}
+                {% endblock %}
 
-            {# Page Header #}
-            {% block page_header %}
-            {% if page_title %}
-            <div class="mb-6">
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ page_title }}</h1>
-                        {% if page_subtitle %}
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ page_subtitle }}</p>
-                        {% endif %}
-                    </div>
-
-                    {% block page_actions %}
-                    {% if show_add_button %}
-                    <a href="{{ add_url }}" class="btn btn-primary">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        <span>{{ add_label|default:'Add New' }}</span>
-                    </a>
-                    {% endif %}
-                    {% endblock %}
+                {# Page Messages #}
+                {% if messages %}
+                <div class="px-4 sm:px-6 lg:px-8 py-4 space-y-2" role="alert" aria-live="polite">
+                    {% for message in messages %}
+                    {% include "easix/components/alert.html" with style=message.tags message=message dismissible=True %}
+                    {% endfor %}
                 </div>
-            </div>
-            {% endif %}
-            {% endblock %}
+                {% endif %}
 
-            {# Content #}
-            {% block content %}{% endblock %}
+                {# Page Header with Actions #}
+                {% block page_header %}
+                {% if page_title %}
+                <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 lg:px-8 py-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="min-w-0 flex-1">
+                            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                {{ page_title }}
+                            </h1>
+                            {% if page_subtitle %}
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                {{ page_subtitle }}
+                            </p>
+                            {% endif %}
+                        </div>
+                        
+                        {% block page_actions %}
+                        {% if show_add_button %}
+                        <div class="flex items-center gap-3 flex-shrink-0">
+                            <a href="{{ add_url }}" class="btn btn-primary">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                <span>{{ add_label|default:'Add New' }}</span>
+                            </a>
+                        </div>
+                        {% endif %}
+                        {% endblock %}
+                    </div>
+                </div>
+                {% endif %}
+                {% endblock %}
+
+                {# Page Content Area #}
+                <div class="px-4 sm:px-6 lg:px-8 py-8">
+                    {% block content %}{% endblock %}
+                </div>
+
+                {# Footer #}
+                <footer class="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 sm:px-6 lg:px-8 py-4 mt-12">
+                    <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 flex-wrap gap-4">
+                        <p>&copy; {% now "Y" %} {{ easix_settings.SITE_BRAND }}. All rights reserved.</p>
+                        <p>Powered by <span class="font-medium text-indigo-600 dark:text-indigo-400">Easix</span> <span class="text-xs">{% easix_version %}</span></p>
+                    </div>
+                </footer>
+            </div>
         </main>
+    </div>
 
-        {# Footer #}
-        <footer class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-4">
-            <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 flex-wrap gap-4">
-                <p>&copy; {% now "Y" %} {{ easix_settings.SITE_BRAND }}. All rights reserved.</p>
-                <p>Powered by <span class="font-medium text-indigo-600 dark:text-indigo-400">Easix</span> {% easix_version %}</p>
-            </div>
-        </footer>
+    {# Bottom Navigation for Mobile #}
+    {% include "easix/partials/bottom_nav.html" %}
 
-        {# Bottom Navigation for Mobile #}
-        {% include "easix/partials/bottom_nav.html" %}
-
-        {# Floating Action Button (FAB) for Mobile #}
-        {% block fab %}
+    {# Floating Action Button (FAB) for Mobile #}
+    {% block fab %}
         {% if show_fab %}
         <a href="{{ fab_url|default:add_url }}" 
            class="btn-floating lg:hidden"
@@ -109,7 +154,6 @@
         </a>
         {% endif %}
         {% endblock %}
-    </div>
 
     {# Toast Container #}
     <div x-data="{ 
@@ -126,7 +170,7 @@
             }
          }"
          @toast.window="add($event.detail.message, $event.detail.type, $event.detail.duration)"
-         class="fixed bottom-20 lg:bottom-4 right-4 z-50 space-y-2 max-w-sm"
+         class="fixed bottom-20 lg:bottom-4 right-4 z-50 space-y-2 max-w-sm pointer-events-none"
          role="region"
          aria-label="Notifications">
         <template x-for="toast in toasts" :key="toast.id">
@@ -137,7 +181,7 @@
                  x-transition:leave="ease-in duration-200"
                  x-transition:leave-start="opacity-100 translate-y-0"
                  x-transition:leave-end="opacity-0 translate-y-2"
-                 class="alert max-w-sm shadow-lg"
+                 class="alert max-w-sm shadow-xl pointer-events-auto"
                  :class="{
                      'alert-success': toast.type === 'success',
                      'alert-danger': toast.type === 'error',
@@ -145,13 +189,6 @@
                      'alert-info': toast.type === 'info'
                  }">
                 <p x-text="toast.message"></p>
-                <button @click="remove(toast.id)" 
-                        class="ml-auto p-1 hover:opacity-75"
-                        aria-label="Dismiss notification">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
             </div>
         </template>
     </div>
@@ -162,6 +199,8 @@
          x-show="open"
          x-cloak
          @keydown.window.escape="close()"
+         @keydown.window.cmd_k.prevent="toggle()"
+         @keydown.window.ctrl_k.prevent="toggle()"
          class="fixed inset-0 z-50"
          role="dialog"
          aria-modal="true"
@@ -172,49 +211,55 @@
              @click="close()"></div>
 
         {# Search Box #}
-        <div class="relative max-w-2xl mx-auto mt-24 mx-4">
+        <div class="relative max-w-2xl mx-auto mt-24 px-4">
             <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
                 <div class="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                     <input ref="input"
                            type="text"
                            x-model="query"
                            @input="search()"
-                           placeholder="Search anything... (Ctrl+K)"
-                           class="flex-1 px-3 py-2 text-lg bg-transparent outline-none text-gray-900 dark:text-white">
-                    <kbd class="hidden sm:inline-block px-2 py-1 text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded">ESC</kbd>
+                           placeholder="Search anything..."
+                           class="flex-1 px-3 py-2 text-lg bg-transparent outline-none text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500">
+                    <kbd class="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-600">
+                        <span>ESC</span>
+                    </kbd>
                 </div>
 
                 {# Results #}
                 <div class="max-h-96 overflow-auto">
                     <template x-if="loading">
                         <div class="p-8 text-center">
-                            <div class="spinner mx-auto"></div>
-                            <p class="mt-2 text-gray-500 dark:text-gray-400">Searching...</p>
+                            <div class="animate-spin h-8 w-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full mx-auto"></div>
+                            <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Searching...</p>
                         </div>
                     </template>
 
                     <template x-if="!loading && results.length === 0 && query.length >= 2">
                         <div class="p-8 text-center text-gray-500 dark:text-gray-400">
-                            <p>No results found for "{{ query }}"</p>
+                            <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p>No results found for "<span x-text="query"></span>"</p>
                         </div>
                     </template>
 
                     <template x-for="result in results" :key="result.pk">
-                        <a :href="`/models/${result.app_label}/${result.model_name}/${result.pk}/`"
-                           class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                        <a :href="result.url || '#'"
+                           @click="close()"
+                           class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-100 dark:border-gray-800 last:border-0 transition-colors">
                             <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 </svg>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="font-medium text-gray-900 dark:text-white truncate" x-text="result.item"></p>
+                                <p class="font-medium text-gray-900 dark:text-white truncate" x-text="result.name || result.title"></p>
                                 <p class="text-sm text-gray-500 dark:text-gray-400" x-text="result.model"></p>
                             </div>
-                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
                         </a>
@@ -254,6 +299,69 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="{% static 'js/easix.js' %}"></script>
+
+    <script>
+        // Dashboard App - Main Alpine.js Component
+        function dashboardApp() {
+            return {
+                darkMode: localStorage.getItem('easix-theme') === 'dark' || 
+                         (!('easix-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches),
+                
+                init() {
+                    this.applyDarkMode();
+                    this.$watch('darkMode', () => this.applyDarkMode());
+                },
+                
+                applyDarkMode() {
+                    localStorage.setItem('easix-theme', this.darkMode ? 'dark' : 'light');
+                    document.documentElement.classList.toggle('dark', this.darkMode);
+                }
+            }
+        }
+
+        // Global Search Component
+        function globalSearch() {
+            return {
+                open: false,
+                query: '',
+                results: [],
+                loading: false,
+                
+                toggle() {
+                    this.open = !this.open;
+                    if (this.open) {
+                        this.$nextTick(() => this.$refs.input?.focus());
+                    }
+                },
+                
+                close() {
+                    this.open = false;
+                    this.query = '';
+                },
+                
+                search() {
+                    if (this.query.length < 2) {
+                        this.results = [];
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    // Call search API
+                    const searchUrl = '{% url "easix:dashboard" %}'.replace('dashboard', 'search-api');
+                    fetch(`${searchUrl}?q=${encodeURIComponent(this.query)}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            this.results = data.results || [];
+                            this.loading = false;
+                        })
+                        .catch(() => {
+                            this.results = [];
+                            this.loading = false;
+                        });
+                }
+            }
+        }
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

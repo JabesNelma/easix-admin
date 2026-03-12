@@ -42,6 +42,7 @@ def dashboard(request):
         "widgets": widgets,
         "models": models,
         "page_title": easix_settings["SITE_TITLE"],
+        "body_class": "dashboard-modern dark",
     }
     
     return render(request, "easix/pages/dashboard.html", context)

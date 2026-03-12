@@ -1,276 +1,587 @@
-{# Model List Page with Smart Table #}
+{# CRUD List View - Data Table with Search, Filter, Sort, Pagination #}
 {% extends "easix/base.html" %}
-{% load static %}
 {% load easix_tags %}
+{% load static %}
 
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize table with Alpine.js
-    const tableConfig = {
-        dataUrl: "{% url 'easix:table_data' config.model._meta.app_label config.model._meta.model_name %}",
-        bulkActionUrl: "{% url 'easix:bulk_action' config.model._meta.app_label config.model_name %}",
-        perPage: {{ config.per_page }},
-        sort: '{{ config.default_sort }}',
-        mobileDisplay: {{ config.mobile_display|safe }},
-    };
-    
-    // Store config globally for the table component
-    window.easixTableConfig = tableConfig;
-});
-</script>
-{% endblock %}
-
-{% block page_actions %}
-<div class="flex items-center gap-3">
-    {# Search #}
-    <div class="search-input">
-        {{ "search"|icon }}
-        <input type="text"
-               x-model="$data.search"
-               placeholder="Search {{ model._meta.verbose_name_plural|title }}..."
-               class="form-input pl-10 w-64">
-    </div>
-    
-    {# Add Button #}
-    <a href="{% url 'easix:model_create' model._meta.app_label model._meta.model_name %}" 
-       class="btn btn-primary">
-        {{ "plus"|icon }}
-        <span>{{ add_label|default:'Create New' }}</span>
-    </a>
-    
-    {# Export Button #}
-    <a href="{% url 'easix:export_csv' model._meta.app_label model._meta.model_name %}" 
-       class="btn btn-secondary">
-        {{ "download"|icon }}
-        <span class="hidden sm:inline">Export</span>
-    </a>
-    
-    {# Column Visibility Toggle #}
-    <div x-data="dropdown()" class="relative">
-        <button type="button" @click="toggle()" class="btn btn-secondary btn-icon">
-            {{ "eye"|icon }}
-        </button>
-        <div x-show="open" x-cloak @click.outside="close()" class="dropdown right-0">
-            <div class="px-4 py-2 border-b border-gray-200">
-                <h4 class="text-sm font-medium text-gray-900">Columns</h4>
-            </div>
-            <template x-for="col in $data.columns" :key="col.field">
-                <label class="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer">
-                    <input type="checkbox" 
-                           :checked="$data.isColumnVisible(col.field)"
-                           @change="$data.toggleColumn(col.field)"
-                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                    <span class="text-sm text-gray-700" x-text="col.label"></span>
-                </label>
-            </template>
-        </div>
-    </div>
-</div>
-{% endblock %}
+{% block title %}{{ model.verbose_name_plural|title }}{% endblock %}
 
 {% block content %}
-<div x-data="table(window.easixTableConfig || {})" class="space-y-4">
-    
-    {# Bulk Actions Bar #}
-    <div x-show="$data.selectedRows.length > 0" 
-         x-cloak
-         class="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-200">
-        <span class="text-sm text-indigo-800">
-            <span x-text="$data.selectedRows.length"></span> items selected
-        </span>
-        <div class="flex items-center gap-2">
-            <template x-for="action in $data.bulkActions" :key="action.action_name">
-                <button type="button"
-                        @click="$data.applyBulkAction(action.action_name)"
-                        class="btn btn-sm"
-                        :class="action.style === 'danger' ? 'btn-danger' : 'btn-secondary'"
-                        x-text="action.label">
-                </button>
-            </template>
-            <button type="button" @click="$data.selectedRows = []; $data.selectAll = false;" 
-                    class="btn btn-sm btn-ghost">
-                Clear
-            </button>
+<div x-data="crudList({
+    modelUrl: '{{ app_label }}/{{ model_name }}',
+    listUrl: '{% url "easix:model_list" app_label model_name %}',
+    createUrl: '{% url "easix:model_create" app_label model_name %}',
+    dataUrl: '{% url "easix:table_data" app_label model_name %}',
+    perPage: {{ config.per_page|default:25 }},
+    columns: [],
+    filters: []
+})" class="space-y-6">
+
+    {# Page Header with Actions #}
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                {{ model.verbose_name_plural|title }}
+            </h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Manage your {{ model.verbose_name_plural|lower }}
+            </p>
         </div>
-    </div>
-    
-    {# Filters #}
-    {% if config.filters %}
-    <div class="card">
-        <div class="card-body">
-            <div class="flex items-center justify-between mb-4">
-                <h4 class="font-medium text-gray-900">Filters</h4>
-                <button type="button" @click="$data.showFilters = !$data.showFilters" class="text-sm text-indigo-600">
-                    <span x-text="$data.showFilters ? 'Hide' : 'Show'"></span>
+        
+        <div class="flex items-center gap-3 flex-wrap">
+            {# Export Buttons #}
+            <div class="flex items-center gap-2" x-show="showExport">
+                <button @click="exportData('csv')" class="btn btn-secondary btn-sm" title="Export CSV">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    <span class="hidden sm:inline">CSV</span>
+                </button>
+                <button @click="exportData('excel')" class="btn btn-secondary btn-sm" title="Export Excel">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span class="hidden sm:inline">Excel</span>
                 </button>
             </div>
-            <div x-show="$data.showFilters" x-cloak class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {% for filter in config.filters %}
-                <div class="form-group">
-                    <label class="form-label">{{ filter.label }}</label>
-                    <select x-model="$data.filterValues['{{ filter.field }}']"
-                            @change="$data.loadData()"
-                            class="form-input">
-                        <option value="">All</option>
-                        {% for option in filter.options %}
-                        <option value="{{ option.value }}">{{ option.label }}</option>
-                        {% endfor %}
-                    </select>
+            
+            {# Create Button #}
+            <a href="{% url 'easix:model_create' app_label model_name %}" class="btn btn-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                <span class="hidden sm:inline">Add New</span>
+            </a>
+        </div>
+    </div>
+
+    {# Filters and Search Bar #}
+    <div class="card">
+        <div class="p-4 space-y-4">
+            {# Search and Filter Toggle #}
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                {% include "easix/components/search_input.html" with 
+                    name='search' 
+                    placeholder='Search...' 
+                    debounce_ms=300 
+                    class='flex-1'
+                %}
+                
+                <div class="flex items-center gap-2">
+                    {# Filter Toggle #}
+                    <button type="button" 
+                            @click="showFilters = !showFilters"
+                            class="btn btn-secondary"
+                            :class="{ 'btn-primary': showFilters }">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                        </svg>
+                        <span>Filters</span>
+                    </button>
+                    
+                    {# Column Visibility Toggle #}
+                    <div x-data="{ open: false }" class="relative">
+                        <button type="button" @click="open = !open" class="btn btn-secondary">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                        </button>
+                        <div x-show="open" @click.away="open = false" class="dropdown right-0 w-48">
+                            <template x-for="col in columns" :key="col.field">
+                                <label class="dropdown-item flex items-center gap-2">
+                                    <input type="checkbox" 
+                                           x-model="visibleColumns"
+                                           :value="col.field"
+                                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <span x-text="col.label"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+                    
+                    {# Refresh Button #}
+                    <button type="button" @click="loadData()" class="btn btn-ghost" title="Refresh">
+                        <svg class="w-5 h-5" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                    </button>
                 </div>
-                {% endfor %}
+            </div>
+            
+            {# Filter Panel #}
+            <div x-show="showFilters" x-collapse class="pt-4 border-t border-gray-200 dark:border-gray-800">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <template x-for="filter in filters" :key="filter.field">
+                        <div>
+                            <label class="form-label">{{ filter.label }}</label>
+                            <select x-model="filterValues[filter.field]" 
+                                    @change="loadData()"
+                                    class="form-input">
+                                <option value="">All</option>
+                                <template x-for="option in filter.options" :key="option.value">
+                                    <option :value="option.value" x-text="option.label"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
     </div>
-    {% endif %}
-    
-    {# Table #}
-    <div class="card">
-        <div class="table-container">
+
+    {# Bulk Actions Bar #}
+    <div x-show="selectedRows.length > 0" 
+         x-transition
+         class="card bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800">
+        <div class="flex items-center justify-between p-4">
+            <span class="text-sm font-medium text-indigo-900 dark:text-indigo-200">
+                <span x-text="selectedRows.length"></span> items selected
+            </span>
+            <div class="flex items-center gap-2">
+                <template x-for="action in bulkActions" :key="action.action_name">
+                    <button @click="applyBulkAction(action.action_name)" 
+                            class="btn btn-secondary btn-sm"
+                            x-text="action.label">
+                    </button>
+                </template>
+                <button @click="selectedRows = []; selectAll = false;" 
+                        class="btn btn-ghost btn-sm text-indigo-600">
+                    Clear selection
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {# Data Table #}
+    <div class="card overflow-hidden">
+        {# Loading State #}
+        <div x-show="loading" class="p-8">
+            <div class="animate-pulse space-y-4">
+                <div class="skeleton h-10 w-full"></div>
+                <div class="skeleton h-10 w-full"></div>
+                <div class="skeleton h-10 w-full"></div>
+                <div class="skeleton h-10 w-full"></div>
+            </div>
+        </div>
+        
+        {# Empty State #}
+        <div x-show="!loading && data.length === 0" class="p-12">
+            {% include "easix/components/empty_state.html" with 
+                icon='document'
+                title='No items found'
+                description='Get started by creating your first item'
+                cta_text='Add New'
+                cta_url=create_url
+            %}
+        </div>
+        
+        {# Desktop Table View #}
+        <div x-show="!loading && data.length > 0" class="hidden sm:block overflow-x-auto">
             <table class="table">
                 <thead class="table-header">
                     <tr>
-                        {% if config.selectable %}
-                        <th class="table-th w-12">
-                            <input type="checkbox"
-                                   x-model="$data.selectAll"
-                                   @change="$data.toggleSelectAll()"
+                        {# Select All Checkbox #}
+                        <th class="w-12 px-6 py-3">
+                            <input type="checkbox" 
+                                   x-model="selectAll"
+                                   @change="toggleSelectAll()"
                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                         </th>
-                        {% endif %}
                         
-                        {% for column in config.columns %}
-                        <th class="table-th"
-                            style="{% if column.width %}width: {{ column.width }};{% endif %}"
-                            @click="$data.toggleSort('{{ column.field }}')">
-                            <div class="flex items-center gap-2">
-                                <span>{{ column.label }}</span>
-                                {% if column.sortable %}
-                                <span x-text="$data.getSortIcon('{{ column.field }}')" class="text-gray-400"></span>
-                                {% endif %}
-                            </div>
-                        </th>
-                        {% endfor %}
+                        {# Column Headers with Sorting #}
+                        <template x-for="col in columns" :key="col.field">
+                            <th x-show="isColumnVisible(col.field)"
+                                @click="toggleSort(col.field)"
+                                x-bind:class="{ 'cursor-pointer': col.sortable }"
+                                class="whitespace-nowrap">
+                                <div class="flex items-center gap-2">
+                                    <span x-text="col.label"></span>
+                                    <span x-show="sort.includes(col.field)" 
+                                          x-text="sort.startsWith('-') && sort.includes(col.field) ? '↓' : '↑'">
+                                    </span>
+                                </div>
+                            </th>
+                        </template>
                         
-                        {% if config.show_row_actions %}
-                        <th class="table-th text-right">Actions</th>
-                        {% endif %}
+                        {# Actions Column #}
+                        <th class="px-6 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
-                
-                <tbody class="divide-y divide-gray-200 bg-white">
-                    {# Loading State #}
-                    <tr x-show="$data.loading">
-                        <td colspan="100%" class="px-6 py-12 text-center">
-                            <div class="spinner mx-auto"></div>
-                            <p class="mt-2 text-gray-500">Loading...</p>
-                        </td>
-                    </tr>
-                    
-                    {# Data Rows #}
-                    <template x-for="row in $data.data" :key="row.pk">
-                        <tr :class="$data.isSelected(row.pk) ? 'table-tr-selected' : 'table-tr'">
-                            {% if config.selectable %}
-                            <td class="table-td">
-                                <input type="checkbox"
-                                       :checked="$data.isSelected(row.pk)"
-                                       @change="$data.toggleSelectRow(row.pk)"
+                <tbody>
+                    <template x-for="item in data" :key="item.pk">
+                        <tr class="table-tr" :class="{ 'table-tr-selected': isSelected(item.pk) }">
+                            {# Select Checkbox #}
+                            <td class="px-6 py-4">
+                                <input type="checkbox" 
+                                       :value="item.pk"
+                                       x-model="selectedRows"
+                                       @change="toggleSelectRow(item.pk)"
                                        class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
                             </td>
-                            {% endif %}
                             
-                            {% for column in config.columns %}
-                            <td class="table-td" x-show="$data.isColumnVisible('{{ column.field }}')">
-                                {% if column.type == 'boolean' %}
-                                <span x-text="$data.formatValue($data.getCellValue(row, '{{ column.field }}'), 'boolean')"></span>
-                                
-                                {% elif column.type == 'image' %}
-                                <img :src="$data.getCellValue(row, '{{ column.field }}')" class="w-10 h-10 rounded object-cover">
-                                
-                                {% else %}
-                                <span x-text="$data.getCellValue(row, '{{ column.field }}')"></span>
-                                {% endif %}
-                            </td>
-                            {% endfor %}
+                            {# Data Cells #}
+                            <template x-for="col in columns" :key="col.field">
+                                <td x-show="isColumnVisible(col.field)" class="px-6 py-4">
+                                    {# Badge Rendering #}
+                                    <template x-if="typeof getCellValue(item, col.field) === 'object' && getCellValue(item, col.field).badge">
+                                        <span class="badge" 
+                                              :class="{
+                                                  'badge-success': getCellValue(item, col.field).style === 'success',
+                                                  'badge-danger': getCellValue(item, col.field).style === 'danger',
+                                                  'badge-warning': getCellValue(item, col.field).style === 'warning',
+                                                  'badge-info': getCellValue(item, col.field).style === 'info',
+                                                  'badge-primary': getCellValue(item, col.field).style === 'primary'
+                                              }"
+                                              x-text="getCellValue(item, col.field).value">
+                                        </span>
+                                    </template>
+                                    
+                                    {# Boolean Rendering #}
+                                    <template x-else-if="col.type === 'boolean'">
+                                        <span x-text="getCellValue(item, col.field) ? '✓' : '✗'"
+                                              :class="getCellValue(item, col.field) ? 'text-green-600' : 'text-red-600'">
+                                        </span>
+                                    </template>
+                                    
+                                    {# Default Rendering #}
+                                    <template x-else>
+                                        <span x-text="getCellValue(item, col.field)"></span>
+                                    </template>
+                                </td>
+                            </template>
                             
-                            {% if config.show_row_actions %}
-                            <td class="table-td text-right">
-                                <div class="flex items-center justify-end gap-1">
-                                    <a href="{% url 'easix:model_detail' model._meta.app_label model._meta.model_name 1 %}"
-                                       :href="`{% url 'easix:model_detail' model._meta.app_label model._meta.model_name 0 %}`.replace('/0/', '/' + row.pk + '/')"
-                                       class="p-1 text-gray-400 hover:text-indigo-600"
+                            {# Actions #}
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end gap-2">
+                                    {# View Action #}
+                                    <a :href="`${listUrl}${item.pk}/`" 
+                                       class="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                                        title="View">
-                                        {{ "eye"|icon }}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                        </svg>
                                     </a>
-                                    <a href="{% url 'easix:model_update' model._meta.app_label model._meta.model_name 1 %}"
-                                       :href="`{% url 'easix:model_update' model._meta.app_label model._meta.model_name 0 %}`.replace('/0/', '/' + row.pk + '/')"
-                                       class="p-1 text-gray-400 hover:text-indigo-600"
+                                    
+                                    {# Edit Action #}
+                                                <a :href="`${listUrl}${item.pk}/edit/`" 
+                                       class="p-2 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-colors"
                                        title="Edit">
-                                        {{ "pencil"|icon }}
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                        </svg>
                                     </a>
-                                    <a href="{% url 'easix:model_delete' model._meta.app_label model._meta.model_name 1 %}"
-                                       :href="`{% url 'easix:model_delete' model._meta.app_label model._meta.model_name 0 %}`.replace('/0/', '/' + row.pk + '/')"
-                                       class="p-1 text-gray-400 hover:text-red-600"
-                                       title="Delete"
-                                       onclick="return confirm('Are you sure?');">
-                                        {{ "trash"|icon }}
-                                    </a>
+                                    
+                                    {# Delete Action #}
+                                    <button @click="confirmDelete(item)" 
+                                            class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                            title="Delete">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
                                 </div>
                             </td>
-                            {% endif %}
                         </tr>
                     </template>
-                    
-                    {# Empty State #}
-                    <tr x-show="!$data.loading && $data.data.length === 0">
-                        <td colspan="100%" class="px-6 py-12">
-                            {% include "easix/components/empty_state.html" with 
-                                icon="document-text"
-                                title="No items found"
-                                text="Get started by creating a new "|add:model._meta.verbose_name|add:"."
-                                action.label=add_label
-                                action.url=add_url %}
-                        </td>
-                    </tr>
                 </tbody>
             </table>
         </div>
         
-        {# Pagination #}
-        <div class="card-footer">
-            {% include "easix/components/pagination.html" %}
-        </div>
-    </div>
-    
-    {# Mobile Card View #}
-    <div class="lg:hidden space-y-3">
-        <template x-for="row in $data.data" :key="row.pk">
-            <div class="card p-4">
-                <div class="flex items-start justify-between mb-3">
-                    <div>
-                        <h4 class="font-medium text-gray-900" x-text="row.str"></h4>
-                    </div>
-                    <input type="checkbox"
-                           :checked="$data.isSelected(row.pk)"
-                           @change="$data.toggleSelectRow(row.pk)"
-                           class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                </div>
-                
-                <div class="space-y-2">
-                    <template x-for="field in $data.mobileDisplay" :key="field">
-                        <div class="flex items-center gap-2 text-sm">
-                            <span class="text-gray-500" x-text="field"></span>
-                            <span class="text-gray-900" x-text="$data.getCellValue(row, field)"></span>
+        {# Mobile Card View #}
+        <div x-show="!loading && data.length > 0" class="sm:hidden p-4 space-y-4">
+            <template x-for="item in data" :key="item.pk">
+                <div class="card p-4">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-900 dark:text-white" x-text="item.display || item.pk"></h3>
                         </div>
-                    </template>
+                        <div class="flex items-center gap-1">
+                            <a :href="`${listUrl}${item.pk}/`" class="p-2 text-gray-600 hover:text-indigo-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </a>
+                            <button @click="confirmDelete(item)" class="p-2 text-gray-600 hover:text-red-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    {# Mobile Fields #}
+                    <div class="space-y-2 text-sm">
+                        <template x-for="col in columns.slice(0, 3)" :key="col.field">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500" x-text="col.label"></span>
+                                <span class="font-medium text-gray-900" x-text="getCellValue(item, col.field)"></span>
+                            </div>
+                        </template>
+                    </div>
+                    
+                    {# Mobile Actions #}
+                    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 flex gap-2">
+                        <a :href="`${listUrl}${item.pk}/edit/`" class="btn btn-primary btn-sm flex-1">Edit</a>
+                        <button @click="confirmDelete(item)" class="btn btn-danger btn-sm">Delete</button>
+                    </div>
                 </div>
-                
-                <div class="flex items-center gap-2 mt-4 pt-4 border-t border-gray-100">
-                    <a href="#" class="btn btn-sm btn-secondary">View</a>
-                    <a href="#" class="btn btn-sm btn-primary">Edit</a>
-                </div>
-            </div>
-        </template>
+            </template>
+        </div>
+        
+        {# Pagination #}
+        {% if page_obj %}
+        {% include "easix/components/pagination.html" with pagination=page_obj query_params=query_params %}
+        {% endif %}
     </div>
 </div>
+
+{# Delete Confirmation Modal #}
+<div x-data="{ 
+        deleteModal: false, 
+        itemToDelete: null,
+        confirmDelete(item) {
+            this.itemToDelete = item;
+            this.deleteModal = true;
+        },
+        async delete() {
+            if (!this.itemToDelete) return;
+            
+            try {
+                const response = await fetch(`${this.listUrl}${this.itemToDelete.pk}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    }
+                });
+                
+                if (response.ok) {
+                    showToast('Item deleted successfully', 'success');
+                    this.loadData();
+                } else {
+                    showToast('Failed to delete item', 'error');
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                showToast('Error deleting item', 'error');
+            } finally {
+                this.deleteModal = false;
+                this.itemToDelete = null;
+            }
+        }
+     }"
+     x-show="deleteModal"
+     x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+     @keydown.window.escape="deleteModal = false"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="modal-title">
+    
+    <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full p-6"
+         @click.away="deleteModal = false">
+        <div class="flex items-center gap-4 mb-4">
+            <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white" id="modal-title">Delete Item</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">This action cannot be undone</p>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <p class="text-gray-700 dark:text-gray-300">
+                Are you sure you want to delete <strong x-text="itemToDelete?.display || 'this item'"></strong>?
+            </p>
+        </div>
+        
+        <div class="flex justify-end gap-3">
+            <button type="button" @click="deleteModal = false" class="btn btn-secondary">
+                Cancel
+            </button>
+            <button type="button" @click="delete()" class="btn btn-danger">
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function crudList(config = {}) {
+    return {
+        loading: false,
+        data: [],
+        columns: config.columns || [],
+        filters: config.filters || [],
+        bulkActions: [],
+        
+        // State
+        page: 1,
+        perPage: config.perPage || 25,
+        total: 0,
+        totalPages: 0,
+        sort: '-pk',
+        search: '',
+        searchDebounce: null,
+        selectedRows: [],
+        selectAll: false,
+        visibleColumns: [],
+        showFilters: false,
+        filterValues: {},
+        showExport: true,
+        
+        // URLs
+        modelUrl: config.modelUrl,
+        listUrl: config.listUrl,
+        createUrl: config.createUrl,
+        dataUrl: config.dataUrl,
+        
+        init() {
+            // Initialize visible columns
+            this.visibleColumns = this.columns.map(c => c.field);
+            
+            // Initialize filters
+            this.filters.forEach(f => {
+                if (f.default !== undefined) {
+                    this.filterValues[f.field] = f.default;
+                }
+            });
+            
+            // Load initial data
+            this.loadData();
+            
+            // Setup search debounce
+            this.$watch('search', (value) => {
+                clearTimeout(this.searchDebounce);
+                this.searchDebounce = setTimeout(() => {
+                    this.page = 1;
+                    this.loadData();
+                }, 300);
+            });
+        },
+        
+        async loadData() {
+            this.loading = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    page: this.page,
+                    per_page: this.perPage,
+                    sort: this.sort,
+                    search: this.search,
+                });
+                
+                // Add filters
+                Object.entries(this.filterValues).forEach(([key, value]) => {
+                    if (value !== '' && value !== null && value !== undefined) {
+                        params.append(`filter_${key}`, value);
+                    }
+                });
+                
+                const response = await fetch(`${this.dataUrl}?${params}`);
+                const result = await response.json();
+                
+                this.data = result.rows || result.results || [];
+                if (result.columns) this.columns = result.columns;
+                if (result.filters) this.filters = result.filters;
+                if (result.bulk_actions) this.bulkActions = result.bulk_actions;
+                
+                this.total = result.pagination?.total || result.count || 0;
+                this.totalPages = result.pagination?.pages || result.total_pages || 0;
+                this.page = result.pagination?.page || result.page || 1;
+                
+                // Update visible columns
+                this.visibleColumns = this.columns
+                    .filter(c => c.visible !== false)
+                    .map(c => c.field);
+                    
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showToast('Error loading data', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+        
+        toggleSort(field) {
+            const col = this.columns.find(c => c.field === field);
+            if (!col?.sortable) return;
+            
+            if (this.sort === field) {
+                this.sort = `-${field}`;
+            } else if (this.sort === `-${field}`) {
+                this.sort = field;
+            } else {
+                this.sort = `-${field}`;
+            }
+            
+            this.loadData();
+        },
+        
+        toggleSelectAll() {
+            this.selectAll = !this.selectAll;
+            if (this.selectAll) {
+                this.selectedRows = this.data.map(row => row.pk);
+            } else {
+                this.selectedRows = [];
+            }
+        },
+        
+        toggleSelectRow(pk) {
+            const index = this.selectedRows.indexOf(pk);
+            if (index === -1) {
+                this.selectedRows.push(pk);
+            } else {
+                this.selectedRows.splice(index, 1);
+            }
+            
+            this.selectAll = this.selectedRows.length === this.data.length;
+        },
+        
+        isSelected(pk) {
+            return this.selectedRows.includes(pk);
+        },
+        
+        isColumnVisible(field) {
+            return this.visibleColumns.includes(field);
+        },
+        
+        getCellValue(row, field) {
+            return row.cells?.[field] ?? row[field] ?? '';
+        },
+        
+        async applyBulkAction(actionName) {
+            if (this.selectedRows.length === 0) {
+                showToast('Please select items first', 'warning');
+                return;
+            }
+            
+            const action = this.bulkActions.find(a => a.action_name === actionName);
+            if (action?.confirm && !confirm(action.confirm)) {
+                return;
+            }
+            
+            // Implement bulk action logic here
+            showToast('Bulk action not yet implemented', 'info');
+        },
+        
+        exportData(format = 'csv') {
+            const params = new URLSearchParams({
+                export: format,
+                sort: this.sort,
+                search: this.search,
+            });
+            window.location.href = `${this.dataUrl}?${params}`;
+        },
+        
+        confirmDelete(item) {
+            // Handled by Alpine component in template
+        }
+    }
+}
+</script>
 {% endblock %}

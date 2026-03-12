@@ -3,6 +3,7 @@ Form Views
 Handle create, update, delete, and detail views.
 """
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib import messages
 from django.contrib.admin.utils import get_fields_from_path
 from django.db import transaction
@@ -278,12 +279,17 @@ def model_create(request, app_label: str, model_name: str):
     norm_config = normalize_config(config)
     context = {
         "model": model,
+            "app_label": app_label,
+            "model_name": model_name,
         "config": norm_config,
+        "fieldsets": norm_config.fieldsets,
         "fields": {f["name"]: f for f in get_form_fields(config)},
         "easix_settings": easix_settings,
         "page_title": f"Create New {model._meta.verbose_name.title()}",
         "action": "create",
         "submit_label": config.submit_label,
+        "list_url": reverse("easix:model_list", args=[app_label, model_name]),
+        "cancel_url": config.cancel_url,
     }
     
     return render(request, "easix/pages/model_form.html", context)
@@ -359,13 +365,18 @@ def model_update(request, app_label: str, model_name: str, pk: int):
     norm_config = normalize_config(config)
     context = {
         "model": model,
+            "app_label": app_label,
+            "model_name": model_name,
         "config": norm_config,
+        "fieldsets": norm_config.fieldsets,
         "instance": instance,
         "fields": {f["name"]: f for f in get_form_fields(config, instance)},
         "easix_settings": easix_settings,
         "page_title": f"Edit {model._meta.verbose_name.title()}",
         "action": "update",
         "submit_label": config.submit_label,
+        "list_url": reverse("easix:model_list", args=[app_label, model_name]),
+        "cancel_url": config.cancel_url,
     }
     
     return render(request, "easix/pages/model_form.html", context)
@@ -389,6 +400,8 @@ def model_detail(request, app_label: str, model_name: str, pk: int):
         "model": model,
         "config": config,
         "instance": instance,
+            "app_label": app_label,
+            "model_name": model_name,
         "fields": get_form_fields(config, instance),
         "easix_settings": easix_settings,
         "page_title": str(instance),
@@ -438,6 +451,8 @@ def model_delete(request, app_label: str, model_name: str, pk: int):
     context = {
         "model": model,
         "instance": instance,
+            "app_label": app_label,
+            "model_name": model_name,
         "easix_settings": get_easix_settings(),
         "page_title": f"Delete {model._meta.verbose_name.title()}",
     }

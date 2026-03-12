@@ -7,6 +7,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.contrib import messages
 from django.contrib.admin.utils import get_fields_from_path
+from django.urls import reverse
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -219,10 +220,13 @@ def model_list(request, app_label: str, model_name: str):
     
     context = {
         "model": model,
+        "app_label": app_label,
+        "model_name": model_name,
         "config": config,
         "easix_settings": easix_settings,
         "page_title": model._meta.verbose_name_plural.title(),
         "add_label": f"Create New {model._meta.verbose_name.title()}",
+        "create_url": reverse("easix:model_create", args=[app_label, model_name]),
     }
     
     return render(request, "easix/pages/model_list.html", context)
