@@ -1,0 +1,68 @@
+{# Chart Widget - Bar, Line, Pie Charts #}
+<div class="chart-container">
+    <div class="chart-header">
+        <h3 class="chart-title">{{ widget.title|default:'Chart' }}</h3>
+        {% if widget.show_legend %}
+        <div class="flex items-center gap-4 text-sm">
+            {% for item in widget.legend %}
+            <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full" style="background-color: {{ item.color }}"></span>
+                <span class="text-gray-600 dark:text-gray-400">{{ item.label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="mt-4" style="height: {{ widget.height|default:'300px' }}">
+        <canvas id="chart-{{ widget.id|default:'default' }}"></canvas>
+    </div>
+    
+    {% if widget.footer %}
+    <div class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
+        <p class="text-sm text-gray-500 dark:text-gray-400">{{ widget.footer }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function() {
+    const ctx = document.getElementById('chart-{{ widget.id|default:"default" }}');
+    if (!ctx) return;
+    
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#9ca3af' : '#6b7280';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+    
+    new Chart(ctx, {
+        type: '{{ widget.chart_type|default:"line" }}',
+        data: {
+            labels: {{ widget.labels|default:"[]"|safe }},
+            datasets: {{ widget.datasets|default:"[]"|safe }}
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: {{ widget.show_legend|yesno:"true,false" }},
+                    labels: {
+                        color: textColor
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                },
+                x: {
+                    ticks: { color: textColor },
+                    grid: { color: gridColor }
+                }
+            }
+        }
+    });
+})();
+</script>

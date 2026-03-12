@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Easix Example Server",
+			"type": "shell",
+			"command": "source /home/jabes/2/open-source/django/easix-admin/venv/bin/activate && cd /home/jabes/2/open-source/django/easix-admin/example && python manage.py runserver 8000",
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

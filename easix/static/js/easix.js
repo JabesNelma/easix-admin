@@ -1,6 +1,7 @@
 /**
- * Easix Admin - Main JavaScript
+ * Easix Admin - Enhanced JavaScript
  * Built with Alpine.js and HTMX
+ * Features: Dark Mode, Toast Notifications, Bottom Sheets, Pull-to-Refresh
  */
 
 // ============================================
@@ -8,54 +9,74 @@
 // ============================================
 
 document.addEventListener('alpine:init', () => {
-    
-    // Sidebar component
+
+    // Sidebar component with collapse functionality
     Alpine.data('sidebar', () => ({
         open: false,
         collapsed: false,
-        
+        expandedGroups: {},
+
         toggle() {
             this.open = !this.open;
         },
-        
+
         close() {
             this.open = false;
         },
-        
+
         toggleCollapse() {
             this.collapsed = !this.collapsed;
             localStorage.setItem('easix-sidebar-collapsed', this.collapsed);
         },
-        
+
+        toggleGroup(groupId) {
+            this.expandedGroups[groupId] = !this.expandedGroups[groupId];
+        },
+
+        isGroupExpanded(groupId) {
+            return this.expandedGroups[groupId] || false;
+        },
+
+        isActiveUrl(pattern) {
+            const currentPath = window.location.pathname;
+            return currentPath.includes(pattern);
+        },
+
         init() {
             // Restore collapsed state
             const collapsed = localStorage.getItem('easix-sidebar-collapsed');
             if (collapsed === 'true') {
                 this.collapsed = true;
             }
+
+            // Listen for sidebar toggle events
+            window.addEventListener('sidebar-toggle', () => {
+                this.toggle();
+            });
         }
     }));
-    
+
     // Dropdown component
     Alpine.data('dropdown', () => ({
         open: false,
-        
+        closeOnOutside: true,
+
         toggle() {
             this.open = !this.open;
         },
-        
+
         close() {
             this.open = false;
         },
-        
+
         init() {
             const closeOnOutside = (event) => {
-                if (this.open && !this.$el.contains(event.target)) {
+                if (this.open && this.closeOnOutside && !this.$el.contains(event.target)) {
                     this.open = false;
                 }
             };
             document.addEventListener('click', closeOnOutside);
-            
+
             this.$watch('open', (value) => {
                 if (value) {
                     this.$nextTick(() => {
@@ -65,26 +86,32 @@ document.addEventListener('alpine:init', () => {
             });
         }
     }));
-    
-    // Modal component
+
+    // Modal component with accessibility
     Alpine.data('modal', () => ({
         open: false,
         loading: false,
-        
+        previousActiveElement: null,
+
         show() {
+            this.previousActiveElement = document.activeElement;
             this.open = true;
             document.body.style.overflow = 'hidden';
+            this.$nextTick(() => {
+                this.$el.querySelector('[autofocus], button, input')?.focus();
+            });
         },
-        
+
         hide() {
             this.open = false;
             document.body.style.overflow = '';
+            this.previousActiveElement?.focus();
         },
-        
+
         toggle() {
             this.open ? this.hide() : this.show();
         },
-        
+
         init() {
             // Close on escape
             document.addEventListener('keydown', (e) => {
@@ -94,8 +121,24 @@ document.addEventListener('alpine:init', () => {
             });
         }
     }));
-    
-    // Table component
+
+    // Bottom Sheet component for mobile
+    Alpine.data('bottomSheet', () => ({
+        open: false,
+        show() {
+            this.open = true;
+            document.body.style.overflow = 'hidden';
+        },
+        hide() {
+            this.open = false;
+            document.body.style.overflow = '';
+        },
+        toggle() {
+            this.open ? this.hide() : this.show();
+        }
+    }));
+
+    // Enhanced Table component
     Alpine.data('table', (config = {}) => ({
         loading: false,
         data: [],
@@ -103,7 +146,7 @@ document.addEventListener('alpine:init', () => {
         filters: [],
         actions: [],
         bulkActions: [],
-        
+
         // State
         page: 1,
         perPage: config.perPage || 25,
@@ -117,15 +160,21 @@ document.addEventListener('alpine:init', () => {
         visibleColumns: [],
         showFilters: false,
         filterValues: {},
-        
+
         // Mobile card view
         mobileDisplay: config.mobileDisplay || [],
-        
+
+        // Pull to refresh
+        pullToRefresh: config.pullToRefresh !== false,
+        refreshing: false,
+        startY: 0,
+        currentY: 0,
+
         init() {
             // Initialize visible columns
             this.columns = config.columns || [];
             this.visibleColumns = this.columns.map(c => c.field);
-            
+
             // Initialize filters
             this.filters = config.filters || [];
             this.filters.forEach(f => {
@@ -133,11 +182,11 @@ document.addEventListener('alpine:init', () => {
                     this.filterValues[f.field] = f.default;
                 }
             });
-            
+
             // Load initial data
             this.loadData();
-            
-            // Listen for HTMX events
+
+            // Setup search debounce
             this.$watch('search', (value) => {
                 clearTimeout(this.searchDebounce);
                 this.searchDebounce = setTimeout(() => {
@@ -145,11 +194,54 @@ document.addEventListener('alpine:init', () => {
                     this.loadData();
                 }, 300);
             });
+
+            // Setup pull to refresh
+            if (this.pullToRefresh) {
+                this.setupPullToRefresh();
+            }
         },
-        
+
+        setupPullToRefresh() {
+            const container = this.$el;
+            if (!container) return;
+
+            container.addEventListener('touchstart', (e) => {
+                if (container.scrollTop === 0) {
+                    this.startY = e.touches[0].clientY;
+                }
+            }, { passive: true });
+
+            container.addEventListener('touchmove', (e) => {
+                if (this.startY && container.scrollTop === 0) {
+                    this.currentY = e.touches[0].clientY;
+                    const diff = this.currentY - this.startY;
+                    if (diff > 0 && diff < 150) {
+                        // Show refresh indicator
+                    }
+                }
+            }, { passive: true });
+
+            container.addEventListener('touchend', () => {
+                if (this.startY && this.currentY) {
+                    const diff = this.currentY - this.startY;
+                    if (diff > 100) {
+                        this.refresh();
+                    }
+                }
+                this.startY = 0;
+                this.currentY = 0;
+            });
+        },
+
+        async refresh() {
+            this.refreshing = true;
+            await this.loadData();
+            this.refreshing = false;
+        },
+
         async loadData() {
             this.loading = true;
-            
+
             try {
                 const params = new URLSearchParams({
                     page: this.page,
@@ -157,43 +249,44 @@ document.addEventListener('alpine:init', () => {
                     sort: this.sort,
                     search: this.search,
                 });
-                
+
                 // Add filters
                 Object.entries(this.filterValues).forEach(([key, value]) => {
                     if (value !== '' && value !== null && value !== undefined) {
                         params.append(`filter_${key}`, value);
                     }
                 });
-                
+
                 const response = await fetch(`${config.dataUrl}?${params}`);
                 const result = await response.json();
-                
+
                 this.data = result.rows || [];
                 this.columns = result.columns || [];
                 this.filters = result.filters || [];
                 this.actions = result.actions || [];
                 this.bulkActions = result.bulkActions || [];
-                
+
                 this.total = result.pagination?.total || 0;
                 this.totalPages = result.pagination?.pages || 0;
                 this.page = result.pagination?.page || 1;
-                
+
                 // Update visible columns
                 this.visibleColumns = this.columns
-                    .filter(c => c.visible)
+                    .filter(c => c.visible !== false)
                     .map(c => c.field);
-                
+
             } catch (error) {
                 console.error('Error loading table data:', error);
+                showToast('Error loading data', 'error');
             } finally {
                 this.loading = false;
             }
         },
-        
+
         toggleSort(field) {
             const col = this.columns.find(c => c.field === field);
             if (!col?.sortable) return;
-            
+
             if (this.sort === field) {
                 this.sort = `-${field}`;
             } else if (this.sort === `-${field}`) {
@@ -201,10 +294,10 @@ document.addEventListener('alpine:init', () => {
             } else {
                 this.sort = `-${field}`;
             }
-            
+
             this.loadData();
         },
-        
+
         toggleSelectAll() {
             this.selectAll = !this.selectAll;
             if (this.selectAll) {
@@ -213,7 +306,7 @@ document.addEventListener('alpine:init', () => {
                 this.selectedRows = [];
             }
         },
-        
+
         toggleSelectRow(pk) {
             const index = this.selectedRows.indexOf(pk);
             if (index === -1) {
@@ -221,35 +314,35 @@ document.addEventListener('alpine:init', () => {
             } else {
                 this.selectedRows.splice(index, 1);
             }
-            
+
             this.selectAll = this.selectedRows.length === this.data.length;
         },
-        
+
         isSelected(pk) {
             return this.selectedRows.includes(pk);
         },
-        
+
         goToPage(page) {
             if (page < 1 || page > this.totalPages) return;
             this.page = page;
             this.loadData();
         },
-        
+
         async applyBulkAction(actionName) {
             if (this.selectedRows.length === 0) {
-                alert('Please select items first');
+                showToast('Please select items first', 'warning');
                 return;
             }
-            
+
             const action = this.bulkActions.find(a => a.action_name === actionName);
             if (action?.confirm && !confirm(action.confirm)) {
                 return;
             }
-            
+
             const formData = new FormData();
             formData.append('action', actionName);
             this.selectedRows.forEach(pk => formData.append('selected_ids', pk));
-            
+
             try {
                 const response = await fetch(config.bulkActionUrl, {
                     method: 'POST',
@@ -259,23 +352,25 @@ document.addEventListener('alpine:init', () => {
                     },
                     body: formData,
                 });
-                
+
                 if (response.ok) {
                     this.selectedRows = [];
                     this.selectAll = false;
                     this.loadData();
-                    
-                    // Show success message
+
                     const result = await response.json();
                     if (result.message) {
-                        showMessage(result.message, 'success');
+                        showToast(result.message, 'success');
                     }
+                } else {
+                    showToast('Action failed', 'error');
                 }
             } catch (error) {
                 console.error('Error applying bulk action:', error);
+                showToast('Error applying action', 'error');
             }
         },
-        
+
         toggleColumn(field) {
             const index = this.visibleColumns.indexOf(field);
             if (index === -1) {
@@ -284,28 +379,28 @@ document.addEventListener('alpine:init', () => {
                 this.visibleColumns.splice(index, 1);
             }
         },
-        
+
         isColumnVisible(field) {
             return this.visibleColumns.includes(field);
         },
-        
+
         getSortIcon(field) {
             if (this.sort === field) return '↑';
             if (this.sort === `-${field}`) return '↓';
             return '';
         },
-        
+
         getCellValue(row, field) {
             return row.cells?.[field] ?? row[field] ?? '';
         },
-        
+
         formatValue(value, type) {
             if (value === null || value === undefined) return '';
-            
+
             if (typeof value === 'object' && value.badge !== undefined) {
-                return value; // Return as-is for badge rendering
+                return value;
             }
-            
+
             switch (type) {
                 case 'boolean':
                     return value ? 'Yes' : 'No';
@@ -314,28 +409,49 @@ document.addEventListener('alpine:init', () => {
                 case 'datetime':
                     return new Date(value).toLocaleString();
                 case 'number':
-                    return typeof value === 'number' 
-                        ? value.toLocaleString() 
+                    return typeof value === 'number'
+                        ? value.toLocaleString()
                         : value;
                 default:
                     return String(value);
             }
+        },
+
+        exportData(format = 'csv') {
+            const params = new URLSearchParams({
+                export: format,
+                sort: this.sort,
+                search: this.search,
+            });
+            window.location.href = `${config.dataUrl}?${params}`;
         }
     }));
-    
-    // Form component
+
+    // Enhanced Form component with validation
     Alpine.data('form', (config = {}) => ({
         submitting: false,
         errors: {},
         values: config.initialValues || {},
-        
+        touched: {},
+
         async submit() {
             this.submitting = true;
             this.errors = {};
-            
+
+            // Mark all fields as touched
+            Object.keys(this.values).forEach(key => {
+                this.touched[key] = true;
+            });
+
+            // Validate before submit
+            if (!this.validate()) {
+                this.submitting = false;
+                return;
+            }
+
             try {
                 const formData = new FormData(this.$el);
-                
+
                 const response = await fetch(this.$el.action, {
                     method: 'POST',
                     headers: {
@@ -344,39 +460,55 @@ document.addEventListener('alpine:init', () => {
                     },
                     body: formData,
                 });
-                
+
                 if (response.redirected) {
                     window.location.href = response.url;
                     return;
                 }
-                
+
                 const result = await response.json();
-                
+
                 if (!response.ok) {
                     if (result.errors) {
                         this.errors = result.errors;
                     } else {
-                        showMessage(result.error || 'An error occurred', 'error');
+                        showToast(result.error || 'An error occurred', 'error');
                     }
+                } else {
+                    showToast('Saved successfully!', 'success');
                 }
             } catch (error) {
                 console.error('Form submission error:', error);
-                showMessage('An error occurred', 'error');
+                showToast('An error occurred', 'error');
             } finally {
                 this.submitting = false;
             }
         },
-        
+
+        validate() {
+            let isValid = true;
+            // Add custom validation logic here
+            return isValid;
+        },
+
         hasError(field) {
             return this.errors[field] !== undefined;
         },
-        
+
         getError(field) {
             return this.errors[field];
+        },
+
+        isTouched(field) {
+            return this.touched[field];
+        },
+
+        markTouched(field) {
+            this.touched[field] = true;
         }
     }));
-    
-    // File upload component
+
+    // File upload component with drag-drop
     Alpine.data('fileUpload', (config = {}) => ({
         files: [],
         dragging: false,
@@ -384,79 +516,79 @@ document.addEventListener('alpine:init', () => {
         progress: 0,
         maxFiles: config.maxFiles || 10,
         acceptedTypes: config.acceptedTypes || '*',
-        
+
         init() {
             const dropZone = this.$el;
-            
+
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 this.dragging = true;
             });
-            
+
             dropZone.addEventListener('dragleave', (e) => {
                 e.preventDefault();
                 this.dragging = false;
             });
-            
+
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
                 this.dragging = false;
                 this.handleFiles(e.dataTransfer.files);
             });
-            
+
             dropZone.addEventListener('click', () => {
                 this.$refs.input?.click();
             });
         },
-        
+
         handleFiles(fileList) {
             const newFiles = Array.from(fileList).slice(0, this.maxFiles - this.files.length);
-            
+
             newFiles.forEach(file => {
-                if (this.acceptedTypes === '*' || 
+                if (this.acceptedTypes === '*' ||
                     file.type.match(this.acceptedTypes)) {
                     this.files.push({
                         file,
                         name: file.name,
                         size: file.size,
                         type: file.type,
-                        preview: file.type.startsWith('image/') 
-                            ? URL.createObjectURL(file) 
+                        preview: file.type.startsWith('image/')
+                            ? URL.createObjectURL(file)
                             : null,
                         progress: 0,
                     });
                 }
             });
-            
+
             this.$dispatch('files-added', { files: this.files });
         },
-        
+
         removeFile(index) {
             this.files.splice(index, 1);
             this.$dispatch('files-removed', { index });
         },
-        
+
         async upload(url) {
             if (this.files.length === 0) return;
-            
+
             this.uploading = true;
             this.progress = 0;
-            
+
             for (let i = 0; i < this.files.length; i++) {
                 const fileData = this.files[i];
                 const formData = new FormData();
                 formData.append('file', fileData.file);
-                
+
                 try {
                     const xhr = new XMLHttpRequest();
-                    
+
                     xhr.upload.addEventListener('progress', (e) => {
                         if (e.lengthComputable) {
                             fileData.progress = (e.loaded / e.total) * 100;
                             this.progress = this.files.reduce((acc, f) => acc + f.progress, 0) / this.files.length;
                         }
                     });
-                    
+
                     await new Promise((resolve, reject) => {
                         xhr.addEventListener('load', () => {
                             if (xhr.status === 200) {
@@ -466,7 +598,7 @@ document.addEventListener('alpine:init', () => {
                             }
                         });
                         xhr.addEventListener('error', reject);
-                        
+
                         xhr.open('POST', url);
                         xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
                         xhr.send(formData);
@@ -475,20 +607,20 @@ document.addEventListener('alpine:init', () => {
                     console.error('Upload error:', error);
                 }
             }
-            
+
             this.uploading = false;
             this.$dispatch('upload-complete', { files: this.files });
         }
     }));
-    
-    // Search component
+
+    // Global Search component
     Alpine.data('globalSearch', () => ({
         open: false,
         query: '',
         results: [],
         loading: false,
         debounce: null,
-        
+
         init() {
             // Keyboard shortcut
             document.addEventListener('keydown', (e) => {
@@ -501,24 +633,29 @@ document.addEventListener('alpine:init', () => {
                         });
                     }
                 }
-                
+
                 if (e.key === 'Escape' && this.open) {
                     this.open = false;
                 }
             });
+
+            // Listen for custom event
+            window.addEventListener('global-search-open', () => {
+                this.open = true;
+            });
         },
-        
+
         async search() {
             clearTimeout(this.debounce);
-            
+
             if (this.query.length < 2) {
                 this.results = [];
                 return;
             }
-            
+
             this.debounce = setTimeout(async () => {
                 this.loading = true;
-                
+
                 try {
                     const response = await fetch(`/search/?q=${encodeURIComponent(this.query)}`);
                     const data = await response.json();
@@ -530,45 +667,69 @@ document.addEventListener('alpine:init', () => {
                 }
             }, 300);
         },
-        
+
         close() {
             this.open = false;
             this.query = '';
             this.results = [];
         }
     }));
-    
-    // Toast notifications
+
+    // Toast notifications system
     Alpine.data('toasts', () => ({
         toasts: [],
-        
-        add(message, type = 'info') {
+        maxToasts: 5,
+
+        add(message, type = 'info', duration = 5000) {
             const id = Date.now();
-            this.toasts.push({ id, message, type });
+            const toast = { id, message, type };
             
-            setTimeout(() => {
-                this.remove(id);
-            }, 5000);
+            // Limit number of toasts
+            if (this.toasts.length >= this.maxToasts) {
+                this.toasts.shift();
+            }
+            
+            this.toasts.push(toast);
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    this.remove(id);
+                }, duration);
+            }
         },
-        
+
         remove(id) {
             this.toasts = this.toasts.filter(t => t.id !== id);
+        },
+
+        clear() {
+            this.toasts = [];
         }
     }));
-    
+
     // Tabs component
     Alpine.data('tabs', (config = {}) => ({
         activeTab: config.defaultTab || 0,
-        
+        orientation: config.orientation || 'horizontal',
+
         select(index) {
             this.activeTab = index;
         },
-        
+
+        selectNext() {
+            const maxIndex = this.$el.querySelectorAll('[role="tab"]').length - 1;
+            this.activeTab = Math.min(this.activeTab + 1, maxIndex);
+        },
+
+        selectPrevious() {
+            this.activeTab = Math.max(this.activeTab - 1, 0);
+        },
+
         isActive(index) {
             return this.activeTab === index;
         }
     }));
-    
+
     // Confirm dialog
     Alpine.data('confirm', (config = {}) => ({
         open: false,
@@ -578,19 +739,73 @@ document.addEventListener('alpine:init', () => {
         cancelText: config.cancelText || 'Cancel',
         confirmStyle: config.confirmStyle || 'danger',
         onConfirm: config.onConfirm || (() => {}),
-        
+
         show(options = {}) {
             Object.assign(this, options);
             this.open = true;
         },
-        
+
         hide() {
             this.open = false;
         },
-        
+
         async confirm() {
             await this.onConfirm();
             this.hide();
+        }
+    }));
+
+    // Notification center
+    Alpine.data('notificationCenter', () => ({
+        notifications: [],
+        unreadCount: 0,
+
+        get notificationCount() {
+            return this.unreadCount;
+        },
+
+        init() {
+            // Load notifications from localStorage or API
+            const stored = localStorage.getItem('easix-notifications');
+            if (stored) {
+                this.notifications = JSON.parse(stored);
+                this.updateUnreadCount();
+            }
+        },
+
+        add(notification) {
+            this.notifications.unshift({
+                id: Date.now(),
+                read: false,
+                time: 'Just now',
+                ...notification
+            });
+            this.updateUnreadCount();
+            this.save();
+            showToast(notification.title, notification.type);
+        },
+
+        markAsRead(id) {
+            const notification = this.notifications.find(n => n.id === id);
+            if (notification) {
+                notification.read = true;
+                this.updateUnreadCount();
+                this.save();
+            }
+        },
+
+        markAllAsRead() {
+            this.notifications.forEach(n => n.read = true);
+            this.unreadCount = 0;
+            this.save();
+        },
+
+        updateUnreadCount() {
+            this.unreadCount = this.notifications.filter(n => !n.read).length;
+        },
+
+        save() {
+            localStorage.setItem('easix-notifications', JSON.stringify(this.notifications));
         }
     }));
 });
@@ -610,7 +825,7 @@ document.addEventListener('htmx:afterRequest', (event) => {
         try {
             const parsed = JSON.parse(messages);
             parsed.forEach(msg => {
-                showMessage(msg.text, msg.level);
+                showToast(msg.text, msg.level);
             });
         } catch (e) {
             // Ignore parse errors
@@ -637,14 +852,13 @@ function getCookie(name) {
     return cookieValue;
 }
 
-function showMessage(message, type = 'info') {
-    // Dispatch custom event for toast handling
-    window.dispatchEvent(new CustomEvent('show-message', {
-        detail: { message, type }
+function showToast(message, type = 'info', duration = 5000) {
+    // Dispatch custom event for Alpine toast
+    window.dispatchEvent(new CustomEvent('show-toast', {
+        detail: { message, type, duration }
     }));
-    
-    // Fallback to alert
-    console.log(`[${type.toUpperCase()}] ${message}`);
+
+    console.log(`[TOAST ${type.toUpperCase()}] ${message}`);
 }
 
 function formatFileSize(bytes) {
@@ -675,7 +889,7 @@ function formatDate(date, format = 'short') {
         const minutes = Math.floor(diff / 60000);
         const hours = Math.floor(diff / 3600000);
         const days = Math.floor(diff / 86400000);
-        
+
         if (minutes < 1) return 'Just now';
         if (minutes < 60) return `${minutes}m ago`;
         if (hours < 24) return `${hours}h ago`;
@@ -698,26 +912,26 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => alert.remove(), 300);
         }, 5000);
     });
-    
+
     // Initialize tooltips
     document.querySelectorAll('[data-tooltip]').forEach(el => {
         el.addEventListener('mouseenter', (e) => {
             const tooltip = document.createElement('div');
-            tooltip.className = 'fixed z-50 px-2 py-1 text-xs text-white bg-gray-900 rounded';
+            tooltip.className = 'fixed z-50 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded shadow-lg';
             tooltip.textContent = el.dataset.tooltip;
             tooltip.style.left = `${e.pageX + 10}px`;
             tooltip.style.top = `${e.pageY + 10}px`;
             document.body.appendChild(tooltip);
             el._tooltip = tooltip;
         });
-        
+
         el.addEventListener('mouseleave', () => {
             if (el._tooltip) {
                 el._tooltip.remove();
                 el._tooltip = null;
             }
         });
-        
+
         el.addEventListener('mousemove', (e) => {
             if (el._tooltip) {
                 el._tooltip.style.left = `${e.pageX + 10}px`;
@@ -725,4 +939,47 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // Handle toast events
+    window.addEventListener('show-toast', (e) => {
+        // This will be handled by Alpine's toasts component
+        const { message, type, duration } = e.detail;
+        const event = new CustomEvent('toast', { detail: { message, type, duration } });
+        document.dispatchEvent(event);
+    });
+
+    // Initialize theme
+    const dark = localStorage.getItem('easix-theme') === 'dark' ||
+                 (!('easix-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) {
+        document.documentElement.classList.add('dark');
+    }
 });
+
+// Swipe gestures for mobile navigation
+let touchStartX = 0;
+let touchEndX = 0;
+
+document.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+}, { passive: true });
+
+function handleSwipe() {
+    const swipeThreshold = 50;
+    const diff = touchStartX - touchEndX;
+
+    if (Math.abs(diff) > swipeThreshold) {
+        if (diff > 0) {
+            // Swipe left - could open sidebar
+            console.log('Swipe left detected');
+        } else {
+            // Swipe right - could close sidebar or go back
+            console.log('Swipe right detected');
+        }
+    }
+}

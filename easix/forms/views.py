@@ -23,6 +23,30 @@ def get_form_config(model: Any) -> FormConfig:
     return FormConfig.from_model(model)
 
 
+def normalize_config(config: FormConfig) -> FormConfig:
+    """Return a copy of config with all string field refs converted to FormField objects."""
+    from dataclasses import replace
+    from .config import Fieldset as FieldsetCls
+
+    new_fieldsets = []
+    for fs in config.fieldsets:
+        new_fields = []
+        for f in fs.fields:
+            if isinstance(f, str):
+                new_fields.append(FormField(name=f))
+            else:
+                new_fields.append(f)
+        new_fieldsets.append(FieldsetCls(
+            title=fs.title,
+            description=fs.description,
+            fields=new_fields,
+            icon=fs.icon,
+            collapsed=fs.collapsed,
+            classes=fs.classes,
+        ))
+    return replace(config, fieldsets=new_fieldsets)
+
+
 def get_form_fields(config: FormConfig, instance: Optional[Any] = None) -> List[Dict]:
     """Get form fields with metadata."""
     fields = []
@@ -251,10 +275,11 @@ def model_create(request, app_label: str, model_name: str):
         except Exception as e:
             messages.error(request, f"{config.error_message} {str(e)}")
     
+    norm_config = normalize_config(config)
     context = {
         "model": model,
-        "config": config,
-        "fields": get_form_fields(config),
+        "config": norm_config,
+        "fields": {f["name"]: f for f in get_form_fields(config)},
         "easix_settings": easix_settings,
         "page_title": f"Create New {model._meta.verbose_name.title()}",
         "action": "create",
@@ -331,11 +356,12 @@ def model_update(request, app_label: str, model_name: str, pk: int):
         except Exception as e:
             messages.error(request, f"{config.error_message} {str(e)}")
     
+    norm_config = normalize_config(config)
     context = {
         "model": model,
-        "config": config,
+        "config": norm_config,
         "instance": instance,
-        "fields": get_form_fields(config, instance),
+        "fields": {f["name"]: f for f in get_form_fields(config, instance)},
         "easix_settings": easix_settings,
         "page_title": f"Edit {model._meta.verbose_name.title()}",
         "action": "update",

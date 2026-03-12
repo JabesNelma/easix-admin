@@ -171,6 +171,15 @@ def divide(value, arg):
         return 0
 
 
+@register.filter
+def abs_value(value):
+    """Return absolute value of a number."""
+    try:
+        return abs(float(value))
+    except (ValueError, TypeError):
+        return 0
+
+
 # ============================================
 # Tags
 # ============================================
@@ -285,12 +294,32 @@ def avatar_tag(context, user, size="md"):
         "lg": "w-12 h-12 text-base",
         "xl": "w-16 h-16 text-lg",
     }
-    
+
     name = str(user) if user else "?"
     initials = "".join([n[0] for n in name.split()[:2]]).upper()[:2]
-    
+
     return {
         "name": name,
         "initials": initials,
         "class": sizes.get(size, sizes["md"]),
     }
+
+
+@register.simple_tag
+def get_first_model_url(models):
+    """Get the URL for the first model in the models list."""
+    if not models:
+        return "#"
+    
+    try:
+        first_model = models[0]
+        app_label = first_model.get('app_label', '')
+        model_name = first_model.get('model_name', '')
+        
+        if app_label and model_name:
+            from django.urls import reverse
+            return reverse('easix:model_list', kwargs={'app_label': app_label, 'model_name': model_name})
+    except (IndexError, KeyError, TypeError):
+        pass
+    
+    return "#"

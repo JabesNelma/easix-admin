@@ -44,6 +44,12 @@ dev = [
     "ruff",
     "pre-commit",
 ]
+charts = [
+    # Chart.js is loaded from CDN, but you can install locally if needed
+]
+full = [
+    # All optional dependencies
+]
 
 [project.urls]
 Homepage = "https://github.com/easix-admin/easix"

@@ -1,4 +1,4 @@
-{# Base Template for Easix Admin #}
+{# Base Template for Easix Admin - Enhanced with Dark Mode, Bottom Nav, and Accessibility #}
 {% load static %}
 {% load easix_tags %}
 
@@ -6,60 +6,73 @@
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#4f46e5">
     <meta name="htmx-config" content='{"includeIndicatorStyles":false}'>
-    
+    <meta name="color-scheme" content="light dark">
+
     <title>{% block title %}{{ page_title|default:easix_settings.SITE_BRAND }}{% endblock %} | {{ easix_settings.SITE_BRAND }}</title>
-    
+
     {# Tailwind CSS #}
     <link rel="stylesheet" href="{% static 'css/easix.css' %}">
-    
+
     {# Custom styles #}
     {% block extra_css %}{% endblock %}
-    
+
     {# Favicon #}
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
 </head>
 
-<body class="h-full" 
+<body class="h-full"
       {% if body_class %}class="{{ body_class }}"{% endif %}>
-    
+
+    {# Skip Link for Accessibility #}
+    <a href="#main-content" 
+       class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg">
+        Skip to main content
+    </a>
+
     {# Sidebar #}
     {% include "easix/partials/sidebar.html" %}
-    
-    {# Main Content #}
+
+    {# Main Content Wrapper #}
     <div class="lg:pl-64 flex flex-col min-h-screen">
-        
+
         {# Header #}
         {% include "easix/partials/header.html" %}
-        
+
         {# Page Content #}
-        <main class="flex-1 p-4 sm:p-6 lg:p-8">
+        <main id="main-content" 
+              class="flex-1 p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8"
+              role="main">
+            
             {# Messages #}
             {% if messages %}
-            <div class="mb-6 space-y-2">
+            <div class="mb-6 space-y-2" role="alert" aria-live="polite">
                 {% for message in messages %}
                 {% include "easix/components/alert.html" with style=message.tags message=message class='mb-2' dismissible=True %}
                 {% endfor %}
             </div>
             {% endif %}
-            
+
             {# Page Header #}
             {% block page_header %}
             {% if page_title %}
             <div class="mb-6">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-900">{{ page_title }}</h1>
+                        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{{ page_title }}</h1>
                         {% if page_subtitle %}
-                        <p class="mt-1 text-sm text-gray-500">{{ page_subtitle }}</p>
+                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ page_subtitle }}</p>
                         {% endif %}
                     </div>
-                    
+
                     {% block page_actions %}
                     {% if show_add_button %}
                     <a href="{{ add_url }}" class="btn btn-primary">
-                        {{ "plus"|icon }}
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
                         <span>{{ add_label|default:'Add New' }}</span>
                     </a>
                     {% endif %}
@@ -68,22 +81,54 @@
             </div>
             {% endif %}
             {% endblock %}
-            
+
             {# Content #}
             {% block content %}{% endblock %}
         </main>
-        
+
         {# Footer #}
-        <footer class="border-t border-gray-200 bg-white px-6 py-4">
-            <div class="flex items-center justify-between text-sm text-gray-500">
+        <footer class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-4">
+            <div class="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 flex-wrap gap-4">
                 <p>&copy; {% now "Y" %} {{ easix_settings.SITE_BRAND }}. All rights reserved.</p>
-                <p>Powered by <span class="font-medium text-indigo-600">Easix</span> {% easix_version %}</p>
+                <p>Powered by <span class="font-medium text-indigo-600 dark:text-indigo-400">Easix</span> {% easix_version %}</p>
             </div>
         </footer>
+
+        {# Bottom Navigation for Mobile #}
+        {% include "easix/partials/bottom_nav.html" %}
+
+        {# Floating Action Button (FAB) for Mobile #}
+        {% block fab %}
+        {% if show_fab %}
+        <a href="{{ fab_url|default:add_url }}" 
+           class="btn-floating lg:hidden"
+           aria-label="{{ fab_label|default:'Add new item' }}">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+        </a>
+        {% endif %}
+        {% endblock %}
     </div>
-    
+
     {# Toast Container #}
-    <div x-data="toasts()" class="fixed bottom-4 right-4 z-50 space-y-2">
+    <div x-data="{ 
+            toasts: [],
+            add(message, type = 'info', duration = 5000) {
+                const id = Date.now();
+                this.toasts.push({ id, message, type });
+                if (duration > 0) {
+                    setTimeout(() => this.remove(id), duration);
+                }
+            },
+            remove(id) {
+                this.toasts = this.toasts.filter(t => t.id !== id);
+            }
+         }"
+         @toast.window="add($event.detail.message, $event.detail.type, $event.detail.duration)"
+         class="fixed bottom-20 lg:bottom-4 right-4 z-50 space-y-2 max-w-sm"
+         role="region"
+         aria-label="Notifications">
         <template x-for="toast in toasts" :key="toast.id">
             <div x-show="true"
                  x-transition:enter="ease-out duration-300"
@@ -100,67 +145,78 @@
                      'alert-info': toast.type === 'info'
                  }">
                 <p x-text="toast.message"></p>
-                <button @click="remove(toast.id)" class="ml-auto">
-                    {{ "x"|icon }}
+                <button @click="remove(toast.id)" 
+                        class="ml-auto p-1 hover:opacity-75"
+                        aria-label="Dismiss notification">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
                 </button>
             </div>
         </template>
     </div>
-    
+
     {# Global Search Modal #}
     {% if easix_settings.ENABLE_GLOBAL_SEARCH %}
-    <div x-data="globalSearch()" 
+    <div x-data="globalSearch()"
          x-show="open"
          x-cloak
          @keydown.window.escape="close()"
          class="fixed inset-0 z-50"
          role="dialog"
-         aria-modal="true">
-        
+         aria-modal="true"
+         aria-label="Search">
+
         {# Backdrop #}
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"
              @click="close()"></div>
-        
+
         {# Search Box #}
         <div class="relative max-w-2xl mx-auto mt-24 mx-4">
-            <div class="bg-white rounded-xl shadow-2xl overflow-hidden">
-                <div class="flex items-center px-4 py-3 border-b border-gray-200">
-                    {{ "search"|icon }}
+            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
                     <input ref="input"
                            type="text"
                            x-model="query"
                            @input="search()"
                            placeholder="Search anything... (Ctrl+K)"
-                           class="flex-1 px-3 py-2 text-lg outline-none">
-                    <kbd class="hidden sm:inline-block px-2 py-1 text-xs text-gray-400 bg-gray-100 rounded">ESC</kbd>
+                           class="flex-1 px-3 py-2 text-lg bg-transparent outline-none text-gray-900 dark:text-white">
+                    <kbd class="hidden sm:inline-block px-2 py-1 text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded">ESC</kbd>
                 </div>
-                
+
                 {# Results #}
                 <div class="max-h-96 overflow-auto">
                     <template x-if="loading">
                         <div class="p-8 text-center">
                             <div class="spinner mx-auto"></div>
-                            <p class="mt-2 text-gray-500">Searching...</p>
+                            <p class="mt-2 text-gray-500 dark:text-gray-400">Searching...</p>
                         </div>
                     </template>
-                    
+
                     <template x-if="!loading && results.length === 0 && query.length >= 2">
-                        <div class="p-8 text-center text-gray-500">
+                        <div class="p-8 text-center text-gray-500 dark:text-gray-400">
                             <p>No results found for "{{ query }}"</p>
                         </div>
                     </template>
-                    
+
                     <template x-for="result in results" :key="result.pk">
                         <a :href="`/models/${result.app_label}/${result.model_name}/${result.pk}/`"
-                           class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
-                            <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600">
-                                {{ "document"|icon }}
+                           class="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
                             </div>
                             <div class="flex-1 min-w-0">
-                                <p class="font-medium text-gray-900 truncate" x-text="result.item"></p>
-                                <p class="text-sm text-gray-500" x-text="result.model"></p>
+                                <p class="font-medium text-gray-900 dark:text-white truncate" x-text="result.item"></p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400" x-text="result.model"></p>
                             </div>
-                            {{ "chevron-right"|icon }}
+                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
                         </a>
                     </template>
                 </div>
@@ -168,13 +224,37 @@
         </div>
     </div>
     {% endif %}
-    
+
     {# Scripts #}
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Configure Tailwind for dark mode
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: 'rgb(238, 242, 255)',
+                            100: 'rgb(224, 231, 255)',
+                            200: 'rgb(199, 210, 254)',
+                            300: 'rgb(165, 180, 252)',
+                            400: 'rgb(129, 140, 248)',
+                            500: 'rgb(99, 102, 241)',
+                            600: 'rgb(79, 70, 229)',
+                            700: 'rgb(67, 56, 202)',
+                            800: 'rgb(55, 48, 163)',
+                            900: 'rgb(49, 46, 129)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="{% static 'js/easix.js' %}"></script>
-    
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,97 @@
+{# Bottom Navigation Bar for Mobile #}
+{% load easix_tags %}
+
+<nav x-data="bottomNav()"
+     class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 safe-area-bottom"
+     role="navigation"
+     aria-label="Bottom navigation">
+    
+    <div class="grid grid-cols-5 h-16">
+        {# Home / Dashboard #}
+        <a href="{% url 'easix:dashboard' %}"
+           class="flex flex-col items-center justify-center gap-1 min-h-[64px] px-2"
+           :class="isActiveUrl('dashboard') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'"
+           aria-label="Dashboard"
+           :aria-current="isActiveUrl('dashboard') ? 'page' : null">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+            </svg>
+            <span class="text-[10px] font-medium truncate max-w-full">Home</span>
+            {# Active indicator #}
+            <span x-show="isActiveUrl('dashboard')" 
+                  class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400"></span>
+        </a>
+
+        {# Models / Content #}
+        <a href="{% get_first_model_url models %}"
+           class="flex flex-col items-center justify-center gap-1 min-h-[64px] px-2"
+           :class="isActiveModelUrl() ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'"
+           aria-label="Content"
+           :aria-current="isActiveModelUrl() ? 'page' : null">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+            <span class="text-[10px] font-medium truncate max-w-full">Content</span>
+            <span x-show="isActiveModelUrl()" 
+                  class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400"></span>
+        </a>
+
+        {# Activity / Analytics #}
+        <a href="{% url 'easix:activity_log' %}"
+           class="flex flex-col items-center justify-center gap-1 min-h-[64px] px-2"
+           :class="isActiveUrl('activity') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'"
+           aria-label="Activity"
+           :aria-current="isActiveUrl('activity') ? 'page' : null">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            <span class="text-[10px] font-medium truncate max-w-full">Analytics</span>
+            <span x-show="isActiveUrl('activity')" 
+                  class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400"></span>
+        </a>
+
+        {# Users #}
+        <a href="{% url 'easix:user_list' %}"
+           class="flex flex-col items-center justify-center gap-1 min-h-[64px] px-2"
+           :class="isActiveUrl('user') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'"
+           aria-label="Users"
+           :aria-current="isActiveUrl('user') ? 'page' : null">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+            </svg>
+            <span class="text-[10px] font-medium truncate max-w-full">Users</span>
+            <span x-show="isActiveUrl('user')" 
+                  class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400"></span>
+        </a>
+
+        {# Settings #}
+        <a href="{% url 'easix:settings' %}"
+           class="flex flex-col items-center justify-center gap-1 min-h-[64px] px-2"
+           :class="isActiveUrl('settings') ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'"
+           aria-label="Settings"
+           :aria-current="isActiveUrl('settings') ? 'page' : null">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span class="text-[10px] font-medium truncate max-w-full">Settings</span>
+            <span x-show="isActiveUrl('settings')" 
+                  class="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400"></span>
+        </a>
+    </div>
+</nav>
+
+<script>
+function bottomNav() {
+    return {
+        isActiveUrl(pattern) {
+            const currentPath = window.location.pathname;
+            return currentPath.includes(pattern);
+        },
+        isActiveModelUrl() {
+            const currentPath = window.location.pathname;
+            return /\/models\/[^\/]+\/[^\/]+/.test(currentPath);
+        }
+    }
+}
+</script>
